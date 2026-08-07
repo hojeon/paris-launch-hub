@@ -23,7 +23,72 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Tests Telegram bot connection by sending a simple test message with 8s Timeout
+ * Sends request using Telegram API with CORS/504 Proxy Fallback
+ */
+async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
+  const targetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage`;
+  const bodyData = {
+    chat_id: cleanChatId,
+    text: text,
+    parse_mode: 'HTML',
+  };
+
+  // 1차: 직접 POST 요청
+  try {
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyData),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return { ok: data.ok, data };
+    }
+    const errData = await response.json().catch(() => ({}));
+    if (errData.description) {
+      return { ok: false, data: errData };
+    }
+  } catch (e) {
+    console.warn('Direct Telegram API POST failed, trying proxy relay...', e);
+  }
+
+  // 2차: CORS Proxy / Gateway Bypass (504 Gateway Timeout 해결용 릴레이)
+  try {
+    const queryParams = new URLSearchParams({
+      chat_id: cleanChatId,
+      text: text,
+      parse_mode: 'HTML',
+    }).toString();
+
+    const directApiGet = `https://api.telegram.org/bot${cleanToken}/sendMessage?${queryParams}`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(directApiGet)}`;
+
+    const proxyRes = await fetch(proxyUrl);
+    const data = await proxyRes.json();
+    return { ok: !!data.ok, data };
+  } catch (e: any) {
+    // 3차: Backup Proxy Relay (AllOrigins)
+    try {
+      const queryParams = new URLSearchParams({
+        chat_id: cleanChatId,
+        text: text,
+        parse_mode: 'HTML',
+      }).toString();
+      const directApiGet = `https://api.telegram.org/bot${cleanToken}/sendMessage?${queryParams}`;
+      const backupProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directApiGet)}`;
+
+      const backupRes = await fetch(backupProxyUrl);
+      const data = await backupRes.json();
+      return { ok: !!data.ok, data };
+    } catch (backupErr: any) {
+      return { ok: false, error: backupErr.message || '네트워크 연결 오류' };
+    }
+  }
+}
+
+/**
+ * Tests Telegram bot connection
  */
 export async function testTelegramConnection(botToken: string, chatId: string): Promise<{ success: boolean; message: string }> {
   const cleanToken = botToken.trim();
@@ -33,45 +98,24 @@ export async function testTelegramConnection(botToken: string, chatId: string): 
     return { success: false, message: '봇 토큰과 챗 ID를 모두 입력해주세요.' };
   }
 
-  const url = `https://api.telegram.org/bot${cleanToken}/sendMessage`;
   const text = `<b>🇫🇷 PARIS LAUNCH HUB 텔레그램 연동 성공!</b>\n\n알림 및 컨펌 파이프라인이 정상적으로 연결되었습니다.`;
+  const res = await callTelegramApi(cleanToken, cleanChatId, text);
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: cleanChatId,
-        text: text,
-        parse_mode: 'HTML',
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    const data = await response.json();
-
-    if (data.ok) {
-      return { success: true, message: '✅ 텔레그램 메세지 발송에 성공했습니다! 텔레그램 앱을 확인하세요.' };
-    } else {
-      let failReason = `오류 (${data.error_code}): ${data.description}`;
-      if (data.error_code === 400 && data.description.includes('chat not found')) {
-        failReason = `오류 (400): 봇과의 대화가 시작되지 않았습니다. 텔레그램에서 @pcds75bot 을 찾아 [/start] 버튼을 먼저 눌러주세요!`;
-      } else if (data.error_code === 401) {
-        failReason = `오류 (401): 봇 토큰(Bot Token)이 올바르지 않습니다. BotFather의 토큰을 다시 확인해주세요.`;
-      }
-      return { success: false, message: failReason };
-    }
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      return { success: false, message: '⏰ 요청 시간 초과 (8초): 텔레그램 API 연결 지연. 봇 토큰이나 네트워크 상태를 확인하세요.' };
-    }
-    return { success: false, message: `연동 실패: ${error.message || '네트워크/CORS 오류'}` };
+  if (res.ok) {
+    return { success: true, message: '✅ 텔레그램 메세지 발송에 성공했습니다! 텔레그램 앱을 확인하세요.' };
   }
+
+  if (res.data) {
+    let failReason = `오류 (${res.data.error_code || 'Err'}): ${res.data.description || '발송 실패'}`;
+    if (res.data.error_code === 400 && res.data.description?.includes('chat not found')) {
+      failReason = `오류 (400): 봇과의 대화가 시작되지 않았습니다. 텔레그램에서 내 봇을 찾아 [/start] 버튼을 먼저 눌러주세요!`;
+    } else if (res.data.error_code === 401) {
+      failReason = `오류 (401): 봇 토큰(Bot Token)이 올바르지 않습니다. BotFather의 토큰을 다시 확인해주세요.`;
+    }
+    return { success: false, message: failReason };
+  }
+
+  return { success: false, message: `연동 실패: ${res.error || '504 Gateway Timeout 우회 시도 실패'}` };
 }
 
 /**
@@ -110,29 +154,15 @@ ${customNote ? `<b>📝 메모:</b> ${escapeHtml(customNote)}\n` : ''}
 <i>💡 위 신제품 정보와 콘텐츠 발행 건에 대해 확인 후 승인 여부를 결정해주세요.</i>
 `.trim();
 
-  const url = `https://api.telegram.org/bot${config.botToken.trim()}/sendMessage`;
+  const cleanToken = config.botToken.trim();
+  const cleanChatId = config.chatId.trim();
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: config.chatId.trim(),
-        text: messageText,
-        parse_mode: 'HTML',
-        disable_web_page_preview: false,
-      }),
-    });
-
-    const data = await response.json();
-    if (data.ok) {
-      return { success: true, message: '텔레그램으로 승인 요청 메시지를 발송했습니다.' };
-    } else {
-      return { success: false, message: `발송 실패 (${data.error_code}): ${data.description}` };
-    }
-  } catch (error: any) {
-    return { success: false, message: `네트워크 오류: ${error.message}` };
+  const res = await callTelegramApi(cleanToken, cleanChatId, messageText);
+  if (res.ok) {
+    return { success: true, message: '텔레그램으로 승인 요청 메시지를 발송했습니다.' };
   }
+
+  return { success: false, message: res.data?.description || res.error || '발송 실패' };
 }
 
 function escapeHtml(str: string): string {
