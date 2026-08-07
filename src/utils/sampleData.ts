@@ -1,0 +1,171 @@
+import { ProductItem, NewsArticle } from '../types';
+
+export const INITIAL_PRODUCTS: ProductItem[] = [
+  {
+    id: 'prod-1',
+    collectedAt: '2026-08-05',
+    brand: 'Chanel',
+    productName: 'N°1 de Chanel Red Camellia Serum Paris Limited',
+    category: '뷰티',
+    status: '출시 완료',
+    launchDate: '2026-08-01',
+    location: '파리 마레 지구 팝업 스토어 & 방돔 플래그십',
+    price: '145 €',
+    keyFeatures: '파리 한정 파케징으로 제작된 레드 카멜리아 리바이탈라이징 세럼. 파리 현지 팝업에서만 에코 리필 캡슐 포함 제공.',
+    targetAudience: '프리미엄 스킨케어 관심 소비자 & 파리 리미티드 컬렉터',
+    sourceUrl: 'https://www.fashionnetwork.com',
+    sourceName: 'FashionNetwork France',
+    reliability: '공식 발표',
+    importance: '높음',
+    importanceScore: 9,
+    scoreDetails: {
+      isOfficialAnnouncement: true, // +3
+      isAvailableForPurchase: true, // +3
+      isParisExclusive: true,       // +2
+      isMajorEvent: false,
+      isTrustedMedia: true,         // +1
+    },
+    followUp: '파리 마레 팝업 현장 취재 및 카드뉴스 제작 완료',
+    naverStatus: '발행 완료',
+    instaStatus: '발행 완료',
+    imagePrepared: true,
+    scheduledDate: '2026-08-06',
+    naverUrl: 'https://blog.naver.com/sample/22340011',
+    instaUrl: 'https://instagram.com/p/C99sample',
+    reusable: true,
+  },
+  {
+    id: 'prod-2',
+    collectedAt: '2026-08-06',
+    brand: 'Jacquemus',
+    productName: 'Le Bisou Paris Bag & Pop-up Café Experience',
+    category: '패션',
+    status: '출시 예정',
+    launchDate: '2026-08-15',
+    location: '라파예트 백화점 옥상 팝업 & 공식 웹사이트',
+    price: '620 €',
+    keyFeatures: '샹젤리제 감성을 담은 유선형 숄더백과 함께 라파예트 루프탑에 자크뮈스 파리지앵 카페를 동시 오픈.',
+    targetAudience: 'MZ세대 패션 트렌드 세터 및 파리 여행객',
+    sourceUrl: 'https://www.lefigaro.fr',
+    sourceName: 'Le Figaro Madame',
+    reliability: '언론 보도',
+    importance: '높음',
+    importanceScore: 8,
+    scoreDetails: {
+      isOfficialAnnouncement: true, // +3
+      isAvailableForPurchase: false,
+      isParisExclusive: true,       // +2
+      isMajorEvent: true,          // +2
+      isTrustedMedia: true,         // +1
+    },
+    followUp: '8/15 오픈 당일 라파예트 루프탑 방문 확인 예정',
+    naverStatus: '원고 완료',
+    instaStatus: '카드뉴스 완료',
+    imagePrepared: true,
+    scheduledDate: '2026-08-12',
+  },
+  {
+    id: 'prod-3',
+    collectedAt: '2026-08-07',
+    brand: 'Devialet',
+    productName: 'Gemini II Opéra de Paris Gold Edition',
+    category: '테크',
+    status: '출시 완료',
+    launchDate: '2026-08-04',
+    location: '드비알레 오페라 가르니에 플래그십 & FNAC 파리 매장',
+    price: '449 €',
+    keyFeatures: '24K 골드 잎 메탈 마감과 오페라 가르니에 협업 로고가 각인된 차세대 액티브 노이즈 캔슬링 이어폰.',
+    targetAudience: '오디오 애호가 & 테크 얼리어답터',
+    sourceUrl: 'https://www.lesechos.fr',
+    sourceName: 'Les Échos Tech',
+    reliability: '공식 발표',
+    importance: '높음',
+    importanceScore: 7,
+    scoreDetails: {
+      isOfficialAnnouncement: true, // +3
+      isAvailableForPurchase: true, // +3
+      isParisExclusive: false,
+      isMajorEvent: false,
+      isTrustedMedia: true,         // +1
+    },
+    followUp: '청음 매장 후기 사진 수집 필요',
+    naverStatus: '대기',
+    instaStatus: '대기',
+    imagePrepared: false,
+    scheduledDate: '2026-08-10',
+  },
+  {
+    id: 'prod-4',
+    collectedAt: '2026-08-07',
+    brand: 'Cédric Grolet',
+    productName: 'Le Fleur de Vanille & Paris Brest Novelty',
+    category: '식품',
+    status: 'Inbox',
+    launchDate: '2026-08-20 (예상)',
+    location: '세드릭 그롤레 오페라 매장 (35 Avenue de l\'Opéra)',
+    price: '18 €',
+    keyFeatures: '타히티 바닐라빈과 타히티 플뢰르 드 셀을 조합한 오페라 본점 한정 조각 디저트.',
+    targetAudience: '파리 디저트 투어객 및 미식가',
+    sourceUrl: 'https://www.sortiraparis.com',
+    sourceName: 'Sortir à Paris',
+    reliability: 'SNS 정보',
+    importance: '중간',
+    importanceScore: 5,
+    scoreDetails: {
+      isOfficialAnnouncement: false,
+      isAvailableForPurchase: false,
+      isParisExclusive: true, // +2
+      isMajorEvent: true,    // +2
+      isTrustedMedia: true,   // +1
+    },
+    followUp: '공식 인스타그램 라인업 발표 체크 필요',
+    naverStatus: '대기',
+    instaStatus: '대기',
+    imagePrepared: false,
+  }
+];
+
+export const INITIAL_NEWS: NewsArticle[] = [
+  {
+    id: 'news-1',
+    title: 'LVMH, Paris Retail Week에서 차세대 친환경 루이비통 패키징 및 신규 라인업 공개',
+    source: 'BFM Business',
+    publishedAt: '2026-08-07 11:30',
+    url: 'https://www.bfmbusiness.bfmtv.com',
+    snippet: 'Paris Retail Week 현장에서 LVMH 그룹이 파리 한정 라인업 "Monogram Eco Paris" 컬렉션을 선보였다. 올 9월 마레 플래그십에서 판매가 시작될 예정이다.',
+    category: '패션',
+    suggestedBrand: 'Louis Vuitton',
+    suggestedProduct: 'Monogram Eco Paris Capsule',
+    suggestedLocation: '파리 마레 지구 플래그십 스토어',
+    suggestedPrice: '1,200 € ~ 3,500 €',
+    isParsed: false,
+  },
+  {
+    id: 'news-2',
+    title: 'Sortir à Paris: Time Out Paris 선정 이달의 파리 팝업 - 바이레도 (Byredo) "Paris Memories" 향수',
+    source: 'Time Out Paris',
+    publishedAt: '2026-08-07 09:15',
+    url: 'https://www.timeout.com/paris',
+    snippet: '바이레도가 파리 생토노레 거리에 단 2주간 파리 한정 오 드 파르펭 "Eau de Saint-Honoré" 팝업 스토어를 연다. 한정판 로고 텀블러 증정.',
+    category: '뷰티',
+    suggestedBrand: 'Byredo',
+    suggestedProduct: 'Eau de Saint-Honoré Limited Edition',
+    suggestedLocation: '파리 생토노레(Rue Saint-Honoré) 팝업',
+    suggestedPrice: '220 €',
+    isParsed: false,
+  },
+  {
+    id: 'news-3',
+    title: 'Viva Technology 2026: 프랑스 신생 테크기업 "Withings", 파리서 실시간 체분석 스마트 링 최초 선보여',
+    source: 'Maddyness',
+    publishedAt: '2026-08-06 17:00',
+    url: 'https://www.maddyness.com',
+    snippet: 'VivaTech 파리 박람회에서 Withings가 스위스/프랑스 기술진이 합작한 "ScanRing Paris"를 최초 발표. 프랑스 시장에선 9월 1일부터 파리 FNAC에서 판매.',
+    category: '테크',
+    suggestedBrand: 'Withings',
+    suggestedProduct: 'ScanRing Paris Smart Ring',
+    suggestedLocation: '파리 FNAC 및 공식 온라인몰',
+    suggestedPrice: '299 €',
+    isParsed: false,
+  }
+];
