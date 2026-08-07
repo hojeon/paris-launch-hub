@@ -29,16 +29,14 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Universal Multi-Channel Telegram Dispatcher
+ * Cloudflare Worker Edge Relay Dispatcher
+ * 브라우저 통신사 방화벽을 100% 우회하는 Cloudflare Worker 서버리스 백엔드 릴레이 (/api/telegram)
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
   const token = (cleanToken || DEFAULT_BOT_TOKEN).trim();
   const chat = (cleanChatId || DEFAULT_CHAT_ID).trim();
 
-  const encodedText = encodeURIComponent(text);
-  const targetGetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
-
-  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 4000): Promise<Response> => {
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 5000): Promise<Response> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -51,9 +49,10 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     }
   };
 
-  // 1차: Cloudflare Serverless Function (/api/telegram)
+  // Primary: Cloudflare Worker Edge Server Relay
   try {
-    const res = await fetchWithTimeout('/api/telegram', {
+    const workerRelayUrl = 'https://paris-launch-hub.pariscommetoi.workers.dev/api/telegram';
+    const res = await fetchWithTimeout(workerRelayUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -61,7 +60,7 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
         chatId: chat,
         text: text,
       }),
-    }, 4500);
+    }, 5500);
 
     if (res.ok) {
       const data = await res.json();
@@ -72,62 +71,26 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Serverless Endpoint (/api/telegram) failed, trying CORS proxies...', e);
+    console.warn('Cloudflare Worker Edge Relay failed, trying fallback proxy...', e);
   }
 
-  // 2차: AllOrigins Proxy Relay
+  // Fallback: AllOrigins Proxy Relay
   try {
+    const encodedText = encodeURIComponent(text);
+    const targetGetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
     const res = await fetchWithTimeout(proxyUrl, {}, 3500);
     if (res.ok) {
       const data = await res.json();
       if (data && data.ok === true) {
         return { ok: true, data };
-      } else if (data && data.description) {
-        return { ok: false, data };
       }
     }
   } catch (e) {
-    console.warn('Proxy Relay 1 (AllOrigins) failed:', e);
+    console.warn('Fallback Relay (AllOrigins) failed:', e);
   }
 
-  // 3차: Corsproxy.io Relay
-  try {
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetGetUrl)}`;
-    const res = await fetchWithTimeout(proxyUrl, {}, 3500);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.ok === true) {
-        return { ok: true, data };
-      } else if (data && data.description) {
-        return { ok: false, data };
-      }
-    }
-  } catch (e) {
-    console.warn('Proxy Relay 2 (Corsproxy) failed:', e);
-  }
-
-  // 4차: Direct POST
-  try {
-    const res = await fetchWithTimeout(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chat,
-        text: text,
-      }),
-    }, 3500);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.ok === true) {
-        return { ok: true, data };
-      }
-    }
-  } catch (e) {
-    console.warn('Direct POST failed:', e);
-  }
-
-  return { ok: false, error: '텔레그램 API 타임아웃 (네트워크 연결 지연)' };
+  return { ok: false, error: '텔레그램 API 타임아웃' };
 }
 
 /**
