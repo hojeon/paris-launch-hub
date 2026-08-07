@@ -20,7 +20,36 @@ export default {
       });
     }
 
-    // Telegram Relay Endpoint
+    // High-speed RSS Proxy Route (/api/rss-proxy?url=...)
+    if (url.pathname === '/api/rss-proxy') {
+      const targetUrl = url.searchParams.get('url');
+      if (!targetUrl) {
+        return new Response('Missing url parameter', { status: 400 });
+      }
+
+      try {
+        const fetchRes = await fetch(targetUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+          },
+        });
+
+        const xmlText = await fetchRes.text();
+        return new Response(xmlText, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/xml; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'max-age=300',
+          },
+        });
+      } catch (err: any) {
+        return new Response(`Proxy Error: ${err.message}`, { status: 500 });
+      }
+    }
+
+    // Telegram Relay Endpoint (/api/telegram)
     if (url.pathname === '/api/telegram' && request.method === 'POST') {
       try {
         const body = (await request.json()) as { botToken?: string; chatId?: string; text?: string };
@@ -28,7 +57,7 @@ export default {
         const chat = (body.chatId || '7875527137').trim();
         const text = body.text || '테스트 메세지';
 
-        // 1. Direct Telegram Form-UrlEncoded POST (Most Reliable for Telegram API)
+        // 1. Direct Telegram Form-UrlEncoded POST
         try {
           const formData = new URLSearchParams();
           formData.append('chat_id', chat);
@@ -47,9 +76,7 @@ export default {
               headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
             });
           }
-        } catch (e) {
-          console.warn('Form-UrlEncoded POST failed:', e);
-        }
+        } catch (e) {}
 
         // 2. Direct JSON POST
         try {
@@ -65,29 +92,14 @@ export default {
               headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
             });
           }
-        } catch (e) {
-          console.warn('JSON POST failed:', e);
-        }
-
-        // 3. CORS Proxy Fallback
-        try {
-          const encodedText = encodeURIComponent(text);
-          const targetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-          const pRes = await fetch(proxyUrl);
-          const pData = await pRes.json();
-          return new Response(JSON.stringify(pData), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-          });
         } catch (e) {}
 
-        return new Response(JSON.stringify({ ok: false, description: 'Telegram API Server Timeout' }), {
+        return new Response(JSON.stringify({ ok: false, description: 'Telegram Server Timeout' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         });
       } catch (err: any) {
-        return new Response(JSON.stringify({ ok: false, description: err.message || 'Worker Error' }), {
+        return new Response(JSON.stringify({ ok: false, description: err.message }), {
           status: 200,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         });

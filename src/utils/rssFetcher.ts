@@ -58,10 +58,51 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
 ];
 
 /**
- * Fetches and parses REAL live RSS Feed items with multi-fallback (rss2json + AllOrigins + DOMParser)
+ * Fetches and parses REAL live RSS Feed items with Cloudflare Worker RSS Proxy
  */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
-  // Strategy 1: rss2json Public API
+  // Strategy 1: Cloudflare Worker High-Speed RSS Proxy (/api/rss-proxy?url=...)
+  try {
+    const workerProxyUrl = `/api/rss-proxy?url=${encodeURIComponent(feed.url)}`;
+    const res = await fetch(workerProxyUrl);
+    if (res.ok) {
+      const xmlText = await res.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      const items = Array.from(xmlDoc.querySelectorAll('item'));
+
+      if (items.length > 0) {
+        return items.slice(0, 10).map((item, idx) => {
+          const title = item.querySelector('title')?.textContent || '제목 없음';
+          const link = item.querySelector('link')?.textContent || item.querySelector('guid')?.textContent || feed.siteUrl;
+          const description = item.querySelector('description')?.textContent || '';
+          const pubDate = item.querySelector('pubDate')?.textContent || '';
+
+          const snippet = description.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
+          const articleUrl = sanitizeArticleUrl(link, feed);
+
+          return {
+            id: `rss-cf-${Date.now()}-${idx}`,
+            title: title.trim(),
+            source: feed.name,
+            publishedAt: pubDate ? new Date(pubDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            url: articleUrl,
+            snippet: snippet.trim() || title,
+            category: feed.category,
+            suggestedBrand: extractBrandFromTitle(title) || feed.name,
+            suggestedProduct: title,
+            suggestedLocation: '파리 매장 / 온라인',
+            suggestedPrice: '가격 미정',
+            isParsed: false,
+          };
+        });
+      }
+    }
+  } catch (err) {
+    console.warn(`Worker RSS proxy failed for ${feed.name}, trying rss2json...`, err);
+  }
+
+  // Strategy 2: rss2json Public API
   try {
     const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
     const response = await fetch(proxyUrl);
@@ -92,10 +133,10 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
       }
     }
   } catch (err) {
-    console.warn(`rss2json failed for ${feed.name}, trying DOMParser relay...`, err);
+    console.warn(`rss2json failed for ${feed.name}:`, err);
   }
 
-  // Strategy 2: AllOrigins Raw Proxy + DOMParser (Parses REAL XML items from French media)
+  // Strategy 3: AllOrigins Proxy
   try {
     const rawProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed.url)}`;
     const res = await fetch(rawProxyUrl);
@@ -132,9 +173,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         });
       }
     }
-  } catch (err) {
-    console.warn(`DOMParser relay failed for ${feed.name}:`, err);
-  }
+  } catch (err) {}
 
   return [];
 }
