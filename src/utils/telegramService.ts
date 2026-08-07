@@ -23,34 +23,53 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Tests Telegram bot connection by sending a simple test message
+ * Tests Telegram bot connection by sending a simple test message with 8s Timeout
  */
 export async function testTelegramConnection(botToken: string, chatId: string): Promise<{ success: boolean; message: string }> {
-  if (!botToken.trim() || !chatId.trim()) {
+  const cleanToken = botToken.trim();
+  const cleanChatId = chatId.trim();
+
+  if (!cleanToken || !cleanChatId) {
     return { success: false, message: '봇 토큰과 챗 ID를 모두 입력해주세요.' };
   }
 
-  const url = `https://api.telegram.org/bot${botToken.trim()}/sendMessage`;
+  const url = `https://api.telegram.org/bot${cleanToken}/sendMessage`;
   const text = `<b>🇫🇷 PARIS LAUNCH HUB 텔레그램 연동 성공!</b>\n\n알림 및 컨펌 파이프라인이 정상적으로 연결되었습니다.`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId.trim(),
+        chat_id: cleanChatId,
         text: text,
         parse_mode: 'HTML',
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const data = await response.json();
+
     if (data.ok) {
-      return { success: true, message: '텔레그램 메세지 발송에 성공했습니다!' };
+      return { success: true, message: '✅ 텔레그램 메세지 발송에 성공했습니다! 텔레그램 앱을 확인하세요.' };
     } else {
-      return { success: false, message: `오류 (${data.error_code}): ${data.description}` };
+      let failReason = `오류 (${data.error_code}): ${data.description}`;
+      if (data.error_code === 400 && data.description.includes('chat not found')) {
+        failReason = `오류 (400): 봇과의 대화가 시작되지 않았습니다. 텔레그램에서 @pcds75bot 을 찾아 [/start] 버튼을 먼저 눌러주세요!`;
+      } else if (data.error_code === 401) {
+        failReason = `오류 (401): 봇 토큰(Bot Token)이 올바르지 않습니다. BotFather의 토큰을 다시 확인해주세요.`;
+      }
+      return { success: false, message: failReason };
     }
   } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      return { success: false, message: '⏰ 요청 시간 초과 (8초): 텔레그램 API 연결 지연. 봇 토큰이나 네트워크 상태를 확인하세요.' };
+    }
     return { success: false, message: `연동 실패: ${error.message || '네트워크/CORS 오류'}` };
   }
 }
