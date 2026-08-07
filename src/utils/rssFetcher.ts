@@ -2,6 +2,15 @@ import { NewsArticle, RssFeedSource } from '../types';
 
 export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   {
+    id: 'rss-google-news-paris',
+    name: 'Google News Paris Launch Live',
+    url: 'https://news.google.com/rss/search?q=lancement+produit+Paris+OR+nouveaut%C3%A9+Paris+OR+popup+Paris&hl=fr&gl=FR&ceid=FR:fr',
+    siteUrl: 'https://news.google.com',
+    category: '패션',
+    description: '프랑스 전 언론사 실시간 파리 런칭/신제품/팝업 속보',
+    isPreset: true,
+  },
+  {
     id: 'rss-lefigaro-eco',
     name: 'Le Figaro Économie',
     url: 'https://www.lefigaro.fr/rss/figaro_economie.xml',
@@ -55,10 +64,19 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     description: '프랑스 프리미엄 소비재 및 스타트업 라이프스타일',
     isPreset: true,
   },
+  {
+    id: 'rss-elle-fr',
+    name: 'ELLE France',
+    url: 'https://www.elle.fr/rss/full',
+    siteUrl: 'https://www.elle.fr',
+    category: '뷰티',
+    description: '프랑스 뷰티, 트렌드, 파리 팝업 및 신제품',
+    isPreset: true,
+  },
 ];
 
 /**
- * Fetches and parses REAL live RSS Feed items with Cloudflare Worker RSS Proxy
+ * Universal XML & Atom RSS Parser
  */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
   // Strategy 1: Cloudflare Worker High-Speed RSS Proxy (/api/rss-proxy?url=...)
@@ -67,42 +85,14 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
     const res = await fetch(workerProxyUrl);
     if (res.ok) {
       const xmlText = await res.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-      const items = Array.from(xmlDoc.querySelectorAll('item'));
-
-      if (items.length > 0) {
-        return items.slice(0, 10).map((item, idx) => {
-          const title = item.querySelector('title')?.textContent || '제목 없음';
-          const link = item.querySelector('link')?.textContent || item.querySelector('guid')?.textContent || feed.siteUrl;
-          const description = item.querySelector('description')?.textContent || '';
-          const pubDate = item.querySelector('pubDate')?.textContent || '';
-
-          const snippet = description.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
-          const articleUrl = sanitizeArticleUrl(link, feed);
-
-          return {
-            id: `rss-cf-${Date.now()}-${idx}`,
-            title: title.trim(),
-            source: feed.name,
-            publishedAt: pubDate ? new Date(pubDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            url: articleUrl,
-            snippet: snippet.trim() || title,
-            category: feed.category,
-            suggestedBrand: extractBrandFromTitle(title) || feed.name,
-            suggestedProduct: title,
-            suggestedLocation: '파리 매장 / 온라인',
-            suggestedPrice: '가격 미정',
-            isParsed: false,
-          };
-        });
-      }
+      const articles = parseXmlArticles(xmlText, feed);
+      if (articles.length > 0) return articles;
     }
   } catch (err) {
-    console.warn(`Worker RSS proxy failed for ${feed.name}, trying rss2json...`, err);
+    console.warn(`Worker RSS proxy failed for ${feed.name}:`, err);
   }
 
-  // Strategy 2: rss2json Public API
+  // Strategy 2: rss2json API Fallback
   try {
     const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
     const response = await fetch(proxyUrl);
@@ -110,14 +100,14 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
       const data = await response.json();
       if (data.status === 'ok' && Array.isArray(data.items) && data.items.length > 0) {
         return data.items.map((item: any, idx: number) => {
-          const title = item.title || '제목 없음';
+          const title = (item.title || '제목 없음').replace(/<[^>]*>?/gm, '').trim();
           const rawSnippet = item.description || item.content || '';
           const snippet = rawSnippet.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
           const articleUrl = sanitizeArticleUrl(item.link || item.guid, feed);
 
           return {
             id: `rss-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-            title: title.trim(),
+            title: title,
             source: feed.name,
             publishedAt: item.pubDate ? item.pubDate.split(' ')[0] : new Date().toISOString().split('T')[0],
             url: articleUrl,
@@ -132,50 +122,74 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         });
       }
     }
-  } catch (err) {
-    console.warn(`rss2json failed for ${feed.name}:`, err);
-  }
+  } catch (err) {}
 
-  // Strategy 3: AllOrigins Proxy
+  // Strategy 3: AllOrigins Raw XML Proxy
   try {
     const rawProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed.url)}`;
     const res = await fetch(rawProxyUrl);
     if (res.ok) {
       const xmlText = await res.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-      const items = Array.from(xmlDoc.querySelectorAll('item'));
-
-      if (items.length > 0) {
-        return items.slice(0, 8).map((item, idx) => {
-          const title = item.querySelector('title')?.textContent || '제목 없음';
-          const link = item.querySelector('link')?.textContent || item.querySelector('guid')?.textContent || feed.siteUrl;
-          const description = item.querySelector('description')?.textContent || '';
-          const pubDate = item.querySelector('pubDate')?.textContent || '';
-
-          const snippet = description.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
-          const articleUrl = sanitizeArticleUrl(link, feed);
-
-          return {
-            id: `rss-xml-${Date.now()}-${idx}`,
-            title: title.trim(),
-            source: feed.name,
-            publishedAt: pubDate ? new Date(pubDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            url: articleUrl,
-            snippet: snippet.trim() || title,
-            category: feed.category,
-            suggestedBrand: extractBrandFromTitle(title) || feed.name,
-            suggestedProduct: title,
-            suggestedLocation: '파리 매장 / 온라인',
-            suggestedPrice: '가격 미정',
-            isParsed: false,
-          };
-        });
-      }
+      const articles = parseXmlArticles(xmlText, feed);
+      if (articles.length > 0) return articles;
     }
   } catch (err) {}
 
   return [];
+}
+
+/**
+ * Parses both RSS (<item>) and Atom (<entry>) XML formats
+ */
+function parseXmlArticles(xmlText: string, feed: RssFeedSource): NewsArticle[] {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+  // Support both RSS (<item>) and Atom (<entry>)
+  const rssItems = Array.from(xmlDoc.querySelectorAll('item'));
+  const atomEntries = Array.from(xmlDoc.querySelectorAll('entry'));
+  const nodes = rssItems.length > 0 ? rssItems : atomEntries;
+
+  if (nodes.length === 0) return [];
+
+  return nodes.slice(0, 12).map((node, idx) => {
+    const titleNode = node.querySelector('title');
+    const title = titleNode ? titleNode.textContent || '제목 없음' : '제목 없음';
+
+    let link = '';
+    const linkNode = node.querySelector('link');
+    if (linkNode) {
+      link = linkNode.getAttribute('href') || linkNode.textContent || '';
+    }
+    if (!link) {
+      link = node.querySelector('guid')?.textContent || feed.siteUrl;
+    }
+
+    const descNode = node.querySelector('description') || node.querySelector('summary') || node.querySelector('content');
+    const description = descNode ? descNode.textContent || '' : '';
+
+    const pubDateNode = node.querySelector('pubDate') || node.querySelector('published') || node.querySelector('updated');
+    const pubDate = pubDateNode ? pubDateNode.textContent || '' : '';
+
+    const cleanTitle = title.replace(/<[^>]*>?/gm, '').trim();
+    const snippet = description.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
+    const articleUrl = sanitizeArticleUrl(link, feed);
+
+    return {
+      id: `rss-xml-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+      title: cleanTitle,
+      source: feed.name,
+      publishedAt: pubDate ? new Date(pubDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      url: articleUrl,
+      snippet: snippet.trim() || cleanTitle,
+      category: feed.category,
+      suggestedBrand: extractBrandFromTitle(cleanTitle) || feed.name,
+      suggestedProduct: cleanTitle,
+      suggestedLocation: '파리 매장 / 온라인',
+      suggestedPrice: '가격 미정',
+      isParsed: false,
+    };
+  });
 }
 
 function sanitizeArticleUrl(url: string | undefined, feed: RssFeedSource): string {
