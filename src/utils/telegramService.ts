@@ -29,7 +29,7 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Cloudflare Worker Edge Relay Dispatcher (v2.0)
+ * Cloudflare Worker Edge Relay Dispatcher (pct88.workers.dev)
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
   const token = (cleanToken || DEFAULT_BOT_TOKEN).trim();
@@ -48,9 +48,9 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     }
   };
 
-  // Primary: Cloudflare Worker Edge Server Relay
+  // Primary: Cloudflare Worker Edge Server Relay (pct88.workers.dev)
   try {
-    const workerRelayUrl = 'https://paris-launch-hub.pariscommetoi.workers.dev/api/telegram';
+    const workerRelayUrl = 'https://paris-launch-hub.pct88.workers.dev/api/telegram';
     const res = await fetchWithTimeout(workerRelayUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -73,23 +73,27 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     console.warn('Cloudflare Worker Edge Relay failed, trying fallback proxy...', e);
   }
 
-  // Fallback: AllOrigins Proxy Relay
+  // Relative path relay fallback
   try {
-    const encodedText = encodeURIComponent(text);
-    const targetGetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
-    const res = await fetchWithTimeout(proxyUrl, {}, 3500);
+    const res = await fetchWithTimeout('/api/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        botToken: token,
+        chatId: chat,
+        text: text,
+      }),
+    }, 4500);
+
     if (res.ok) {
       const data = await res.json();
       if (data && data.ok === true) {
         return { ok: true, data };
       }
     }
-  } catch (e) {
-    console.warn('Fallback Relay (AllOrigins) failed:', e);
-  }
+  } catch (e) {}
 
-  return { ok: false, error: '[v2.0 엣지릴레이] 텔레그램 API 타임아웃' };
+  return { ok: false, error: '텔레그램 엣지 백엔드 API 타임아웃' };
 }
 
 /**
@@ -113,7 +117,7 @@ export async function testTelegramConnection(botToken: string, chatId: string): 
     return { success: false, message: failReason };
   }
 
-  return { success: false, message: `❌ 발송 실패: ${res.error || '[v2.0 엣지릴레이] 텔레그램 API 타임아웃'}` };
+  return { success: false, message: `❌ 발송 실패: ${res.error || '텔레그램 API 타임아웃'}` };
 }
 
 /**
