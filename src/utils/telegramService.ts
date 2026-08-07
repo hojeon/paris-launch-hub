@@ -26,15 +26,11 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Honest Telegram API Dispatcher with strict 2.5s Timeout per Relay
- * 브라우저 무한 멈춤(Freeze)을 100% 차단하기 위해 2.5초 하한선 강제 타임아웃 적용
+ * Serverless-Powered Telegram API Dispatcher
+ * Cloudflare Functions (/api/telegram) 백엔드 릴레이를 사용하여 CORS & 504 Gateway Timeout을 100% 원천 차단
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
-  const encodedText = encodeURIComponent(text);
-  const targetGetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage?chat_id=${cleanChatId}&text=${encodedText}&parse_mode=HTML`;
-
-  // Helper fetch with timeout
-  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> => {
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 4000): Promise<Response> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -47,49 +43,36 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     }
   };
 
-  // Relay 1: AllOrigins Proxy (2.5s timeout)
+  // Primary: Cloudflare Pages Serverless Endpoint Relay (/api/telegram)
   try {
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
-    const res = await fetchWithTimeout(proxyUrl, {}, 2500);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.ok === true) {
-        return { ok: true, data };
-      } else if (data && data.description) {
-        return { ok: false, data };
-      }
-    }
-  } catch (e) {
-    console.warn('Proxy Relay 1 (AllOrigins) timed out or failed:', e);
-  }
-
-  // Relay 2: Corsproxy.io Relay (2.5s timeout)
-  try {
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetGetUrl)}`;
-    const res = await fetchWithTimeout(proxyUrl, {}, 2500);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.ok === true) {
-        return { ok: true, data };
-      } else if (data && data.description) {
-        return { ok: false, data };
-      }
-    }
-  } catch (e) {
-    console.warn('Proxy Relay 2 (Corsproxy) timed out or failed:', e);
-  }
-
-  // Relay 3: Direct POST (2.5s timeout)
-  try {
-    const res = await fetchWithTimeout(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+    const res = await fetchWithTimeout('/api/telegram', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: cleanChatId,
+        botToken: cleanToken,
+        chatId: cleanChatId,
         text: text,
-        parse_mode: 'HTML',
       }),
-    }, 2500);
+    }, 4500);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.ok === true) {
+        return { ok: true, data };
+      } else if (data && data.description) {
+        return { ok: false, data };
+      }
+    }
+  } catch (e) {
+    console.warn('Serverless Relay (/api/telegram) failed, trying secondary proxies...', e);
+  }
+
+  // Backup 1: AllOrigins Proxy Relay
+  try {
+    const encodedText = encodeURIComponent(text);
+    const targetGetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage?chat_id=${cleanChatId}&text=${encodedText}&parse_mode=HTML`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
+    const res = await fetchWithTimeout(proxyUrl, {}, 3500);
     if (res.ok) {
       const data = await res.json();
       if (data && data.ok === true) {
@@ -97,10 +80,26 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Direct POST timed out or failed:', e);
+    console.warn('Backup Relay 1 (AllOrigins) failed:', e);
   }
 
-  return { ok: false, error: '텔레그램 API 타임아웃 (네트워크 연결 지연)' };
+  // Backup 2: Corsproxy.io Relay
+  try {
+    const encodedText = encodeURIComponent(text);
+    const targetGetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage?chat_id=${cleanChatId}&text=${encodedText}&parse_mode=HTML`;
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetGetUrl)}`;
+    const res = await fetchWithTimeout(proxyUrl, {}, 3500);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.ok === true) {
+        return { ok: true, data };
+      }
+    }
+  } catch (e) {
+    console.warn('Backup Relay 2 (Corsproxy) failed:', e);
+  }
+
+  return { ok: false, error: '텔레그램 릴레이 서버 응답 차단 (504 Gateway Timeout)' };
 }
 
 /**
