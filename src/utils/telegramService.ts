@@ -26,17 +26,31 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Honest Telegram API Dispatcher
- * 실제 Telegram API의 ok: true 응답을 받았을 때만 성공을 판정합니다.
+ * Honest Telegram API Dispatcher with strict 2.5s Timeout per Relay
+ * 브라우저 무한 멈춤(Freeze)을 100% 차단하기 위해 2.5초 하한선 강제 타임아웃 적용
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
   const encodedText = encodeURIComponent(text);
   const targetGetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage?chat_id=${cleanChatId}&text=${encodedText}&parse_mode=HTML`;
 
-  // Relay 1: AllOrigins Proxy
+  // Helper fetch with timeout
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  };
+
+  // Relay 1: AllOrigins Proxy (2.5s timeout)
   try {
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
-    const res = await fetch(proxyUrl);
+    const res = await fetchWithTimeout(proxyUrl, {}, 2500);
     if (res.ok) {
       const data = await res.json();
       if (data && data.ok === true) {
@@ -46,13 +60,13 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Proxy Relay 1 (AllOrigins) failed:', e);
+    console.warn('Proxy Relay 1 (AllOrigins) timed out or failed:', e);
   }
 
-  // Relay 2: Corsproxy.io Relay
+  // Relay 2: Corsproxy.io Relay (2.5s timeout)
   try {
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetGetUrl)}`;
-    const res = await fetch(proxyUrl);
+    const res = await fetchWithTimeout(proxyUrl, {}, 2500);
     if (res.ok) {
       const data = await res.json();
       if (data && data.ok === true) {
@@ -62,12 +76,12 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Proxy Relay 2 (Corsproxy) failed:', e);
+    console.warn('Proxy Relay 2 (Corsproxy) timed out or failed:', e);
   }
 
-  // Relay 3: Direct POST
+  // Relay 3: Direct POST (2.5s timeout)
   try {
-    const res = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+    const res = await fetchWithTimeout(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -75,7 +89,7 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
         text: text,
         parse_mode: 'HTML',
       }),
-    });
+    }, 2500);
     if (res.ok) {
       const data = await res.json();
       if (data && data.ok === true) {
@@ -83,10 +97,10 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Direct POST failed:', e);
+    console.warn('Direct POST timed out or failed:', e);
   }
 
-  return { ok: false, error: '텔레그램 API 서버 응답 없음 (504 Gateway Timeout 또는 네트워크 블로킹)' };
+  return { ok: false, error: '텔레그램 API 타임아웃 (네트워크 연결 지연)' };
 }
 
 /**
@@ -117,7 +131,7 @@ export async function testTelegramConnection(botToken: string, chatId: string): 
     return { success: false, message: failReason };
   }
 
-  return { success: false, message: `❌ 발송 실패: ${res.error || '텔레그램 API 504 Gateway Timeout'}` };
+  return { success: false, message: `❌ 발송 실패: ${res.error || '텔레그램 API 타임아웃'}` };
 }
 
 /**
