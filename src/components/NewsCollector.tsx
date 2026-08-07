@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, ArrowRight, RefreshCw, Zap } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, ArrowRight, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles } from '../utils/rssFetcher';
 import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
@@ -10,6 +10,7 @@ interface NewsCollectorProps {
   onImportToInbox: (product: Omit<ProductItem, 'id'>) => void;
   onRemoveNews: (newsId: string) => void;
   onAddNewsArticles: (newArticles: NewsArticle[]) => void;
+  onClearNewsList?: () => void;
 }
 
 export const NewsCollector: React.FC<NewsCollectorProps> = ({
@@ -17,6 +18,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   onImportToInbox,
   onRemoveNews,
   onAddNewsArticles,
+  onClearNewsList,
 }) => {
   const [copiedQuery, setCopiedQuery] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('전체');
@@ -66,22 +68,20 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     const articles = await fetchRssArticles(feed);
 
     if (autoImportDirectly) {
-      // DB Inbox로 자동 전송
       let count = 0;
       const tgConfig = getTelegramConfig();
       for (const article of articles) {
         const prod = convertArticleToProduct(article);
         onImportToInbox(prod);
         count++;
-        // 텔레그램 연동 시 자동 통보
         if (tgConfig.enabled) {
           sendProductApprovalRequest(tgConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
         }
       }
-      setRssMessage(`⚡ ${count}개의 RSS 소식이 DB Inbox로 100% 자동 등록되었습니다!`);
+      setRssMessage(`⚡ ${count}개의 라이브 RSS 소식이 DB Inbox로 100% 자동 등록되었습니다!`);
     } else {
       onAddNewsArticles(articles);
-      setRssMessage(`${feed.name} 피드에서 ${articles.length}개의 수집 항목을 불러왔습니다!`);
+      setRssMessage(`${feed.name} 피드에서 ${articles.length}개의 진짜 실시간 기사를 불러왔습니다!`);
     }
 
     setIsFetchingRss(false);
@@ -111,7 +111,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       setRssMessage(`⚡ 총 ${count}개의 최신 파리 기사가 DB Inbox에 자동 등록 완료되었습니다!`);
     } else {
       onAddNewsArticles(allNew);
-      setRssMessage(`총 ${allNew.length}개의 라이브 RSS 소식을 뉴스 수집함으로 가져왔습니다!`);
+      setRssMessage(`총 ${allNew.length}개의 진짜 프랑스 실시간 기사를 수집함으로 가져왔습니다!`);
     }
 
     setIsFetchingRss(false);
@@ -264,8 +264,21 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           </div>
 
           <div className="flex gap-2 items-center" style={{ flexWrap: 'wrap' }}>
+            {/* Clear All List Button */}
+            {onClearNewsList && newsList.length > 0 && (
+              <button
+                className="btn-outline btn-sm"
+                onClick={onClearNewsList}
+                title="이전 대기 수집 목록 비우기"
+                style={{ color: 'var(--accent-rose)' }}
+              >
+                <Trash2 size={14} />
+                <span>수집 목록 전체 비우기</span>
+              </button>
+            )}
+
             {/* Auto Import Toggle Switch */}
-            <label className="flex items-center gap-2" style={{ cursor: 'pointer', background: 'rgba(226,184,87,0.12)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-gold)' }}>
+            <label className="flex items-center gap-2" style={{ cursor: 'pointer', background: 'rgba(217, 119, 6, 0.1)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-gold)' }}>
               <input
                 type="checkbox"
                 checked={autoImportDirectly}
@@ -273,7 +286,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                 style={{ cursor: 'pointer', width: '16px', height: '16px' }}
               />
               <Zap size={16} className="text-gold" />
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-gold)' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-gold)' }}>
                 {autoImportDirectly ? '⚡ DB Inbox 자동 등록 ON' : 'DB Inbox 자동 등록 OFF'}
               </span>
             </label>
@@ -291,8 +304,8 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         </div>
 
         {/* Live RSS Preset Source Toolbar */}
-        <div className="rss-toolbar mb-4" style={{ background: 'var(--bg-card-subtle, rgba(255,255,255,0.04))', padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-gold, #f39c12)' }}>
+        <div className="rss-toolbar mb-4" style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--accent-gold)' }}>
             📡 실시간 파리 매체 RSS 선택 수집:
           </div>
           <div className="flex flex-wrap gap-2 mb-3">

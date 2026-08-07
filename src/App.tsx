@@ -55,6 +55,12 @@ export const App: React.FC = () => {
     setNewsList((prev) => [...newArticles, ...prev]);
   };
 
+  const handleClearNewsList = () => {
+    if (confirm('수집 대기 목록을 모두 비우시겠습니까?')) {
+      setNewsList([]);
+    }
+  };
+
   const handleUpdateProduct = (updated: ProductItem) => {
     setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   };
@@ -106,6 +112,7 @@ export const App: React.FC = () => {
             onImportToInbox={handleImportToInbox}
             onRemoveNews={handleRemoveNews}
             onAddNewsArticles={handleAddNewsArticles}
+            onClearNewsList={handleClearNewsList}
           />
         )}
 
@@ -154,4 +161,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-
