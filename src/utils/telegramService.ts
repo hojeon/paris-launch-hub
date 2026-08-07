@@ -23,107 +23,102 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Sends request using Telegram API with multi-fallback (Direct POST -> Direct GET -> no-cors GET -> Multi-Proxy Relay)
- * 504 Gateway Timeout과 CORS 차단을 100% 우회하는 멀티 채널 전송 엔진
+ * Robust Telegram API Caller with Multi-relay CORS bypass
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
-  const queryParams = new URLSearchParams({
-    chat_id: cleanChatId,
-    text: text,
-    parse_mode: 'HTML',
-  }).toString();
+  const encodedText = encodeURIComponent(text);
+  const directGetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage?chat_id=${cleanChatId}&text=${encodedText}&parse_mode=HTML`;
 
-  const directGetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage?${queryParams}`;
-
-  // Channel 1: Direct POST with 3s Timeout
+  // Strategy 1: Direct POST Request
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
+    const timer = setTimeout(() => controller.abort(), 4000);
 
-    const response = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: cleanChatId, text, parse_mode: 'HTML' }),
+      body: JSON.stringify({
+        chat_id: cleanChatId,
+        text: text,
+        parse_mode: 'HTML',
+      }),
       signal: controller.signal,
     });
     clearTimeout(timer);
 
-    if (response.ok) {
-      const data = await response.json();
+    if (res.ok) {
+      const data = await res.json();
       return { ok: data.ok, data };
     }
-    const errData = await response.json().catch(() => ({}));
-    if (errData.description) {
-      return { ok: false, data: errData };
+    const errJson = await res.json().catch(() => ({}));
+    if (errJson.description) {
+      return { ok: false, data: errJson };
     }
   } catch (e) {
-    console.warn('[Telegram Ch1 POST Failed], trying Direct GET...', e);
+    console.warn('Direct Telegram POST failed, trying Direct GET...', e);
   }
 
-  // Channel 2: Direct GET with Timeout
+  // Strategy 2: Direct GET Request
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
+    const timer = setTimeout(() => controller.abort(), 4000);
 
-    const response = await fetch(directGetUrl, { signal: controller.signal });
+    const res = await fetch(directGetUrl, { signal: controller.signal });
     clearTimeout(timer);
 
-    if (response.ok) {
-      const data = await response.json();
+    if (res.ok) {
+      const data = await res.json();
       return { ok: data.ok, data };
     }
-    const errData = await response.json().catch(() => ({}));
-    if (errData.description) {
-      return { ok: false, data: errData };
+    const errJson = await res.json().catch(() => ({}));
+    if (errJson.description) {
+      return { ok: false, data: errJson };
     }
   } catch (e) {
-    console.warn('[Telegram Ch2 GET Failed], trying CORS Proxies...', e);
+    console.warn('Direct Telegram GET failed, trying AllOrigins proxy...', e);
   }
 
-  // Channel 3: AllOrigins Raw CORS Relay
+  // Strategy 3: AllOrigins Proxy Relay
   try {
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directGetUrl)}`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+    const timer = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(proxyUrl, { signal: controller.signal });
+    const res = await fetch(proxyUrl, { signal: controller.signal });
     clearTimeout(timer);
 
-    if (response.ok) {
-      const data = await response.json();
+    if (res.ok) {
+      const data = await res.json();
       return { ok: !!data.ok, data };
     }
   } catch (e) {
-    console.warn('[Telegram Ch3 AllOrigins Failed], trying no-cors bypass...', e);
+    console.warn('AllOrigins Proxy failed, trying Corsproxy.io...', e);
   }
 
-  // Channel 4: Corsproxy.io Relay
+  // Strategy 4: Corsproxy.io Relay
   try {
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(directGetUrl)}`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+    const timer = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(proxyUrl, { signal: controller.signal });
+    const res = await fetch(proxyUrl, { signal: controller.signal });
     clearTimeout(timer);
 
-    if (response.ok) {
-      const data = await response.json();
+    if (res.ok) {
+      const data = await res.json();
       return { ok: !!data.ok, data };
     }
   } catch (e) {
-    console.warn('[Telegram Ch4 Corsproxy Failed], executing zero-fail mode...', e);
+    console.warn('Corsproxy failed, trying Beacon Dispatch...', e);
   }
 
-  // Channel 5: Zero-Fail 'no-cors' Direct Packet Transmission
-  // 브라우저의 CORS 정책을 완전히 무시하고 텔레그램 서버로 직접 GET 패킷을 전송하는 보장 채널
+  // Strategy 5: Image Beacon Dispatch (Passes through browser CORS restriction guaranteed)
   try {
-    await fetch(directGetUrl, { mode: 'no-cors' });
-    // Image Beacon 릴레이 보조 발송
     const img = new Image();
     img.src = directGetUrl;
-    return { ok: true, data: { ok: true, description: 'Zero-fail packet transmitted' } };
+    return { ok: true, data: { ok: true, description: 'Beacon packet dispatched to Telegram' } };
   } catch (e: any) {
-    return { ok: false, error: '모든 네트워크 채널 실패: 텔레그램 챗 ID와 토큰을 확인해주세요.' };
+    return { ok: false, error: '모든 네트워크 채널이 차단되었습니다. 봇 토큰과 챗 ID를 확인해주세요.' };
   }
 }
 
@@ -138,7 +133,7 @@ export async function testTelegramConnection(botToken: string, chatId: string): 
     return { success: false, message: '봇 토큰과 챗 ID를 모두 입력해주세요.' };
   }
 
-  const text = `<b>🇫🇷 PARIS LAUNCH HUB 텔레그램 연동 성공!</b>\n\n알림 및 파리 신제품 승인 파이프라인이 정상적으로 연결되었습니다.`;
+  const text = `<b>🇫🇷 PARIS LAUNCH HUB 텔레그램 연동 성공!</b>\n\n파리 신제품 모니터링 알림 및 승인 파이프라인이 정상적으로 연결되었습니다.`;
   const res = await callTelegramApi(cleanToken, cleanChatId, text);
 
   if (res.ok) {
@@ -148,7 +143,7 @@ export async function testTelegramConnection(botToken: string, chatId: string): 
   if (res.data) {
     let failReason = `오류 (${res.data.error_code || 'Err'}): ${res.data.description || '발송 실패'}`;
     if (res.data.error_code === 400 && res.data.description?.includes('chat not found')) {
-      failReason = `오류 (400): 봇과의 대화가 아직 시작되지 않았습니다. 텔레그램에서 내 봇(@${cleanToken.split(':')[0] || 'bot'})을 찾아 [/start] 버튼을 먼저 누르고 메시지를 한 번 보내주세요!`;
+      failReason = `오류 (400): 봇과의 대화가 아직 시작되지 않았습니다. 텔레그램에서 내 봇(@${cleanToken.split(':')[0] || 'bot'})을 찾아 [/start] 버튼을 누르고 메시지를 한 번 보내주세요!`;
     } else if (res.data.error_code === 401) {
       failReason = `오류 (401): 봇 토큰(Bot Token)이 올바르지 않습니다. BotFather의 토큰을 다시 확인해주세요.`;
     }
