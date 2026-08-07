@@ -20,6 +20,24 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     isPreset: true,
   },
   {
+    id: 'rss-vogue',
+    name: 'Vogue France',
+    url: 'https://www.vogue.fr/rss/news',
+    siteUrl: 'https://www.vogue.fr',
+    category: '패션',
+    description: '파리 하이 패션, 럭셔리 컬렉션 & 뷰티 런칭',
+    isPreset: true,
+  },
+  {
+    id: 'rss-lsa',
+    name: 'LSA Conso',
+    url: 'https://www.lsa-conso.fr/rss',
+    siteUrl: 'https://www.lsa-conso.fr',
+    category: '식품',
+    description: '프랑스 소비재, 유통, 식음료 신제품 런칭 전문',
+    isPreset: true,
+  },
+  {
     id: 'rss-sortiraparis',
     name: 'Sortir à Paris',
     url: 'https://www.sortiraparis.com/rss',
@@ -118,13 +136,12 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
     console.warn(`DOMParser relay failed for ${feed.name}:`, err);
   }
 
-  // If live RSS is blocked by network, return empty list instead of duplicate dummy items
   return [];
 }
 
 function sanitizeArticleUrl(url: string | undefined, feed: RssFeedSource): string {
   if (!url || url.endsWith('.xml') || url.includes('/rss')) {
-    return (feed as any).siteUrl || feed.url.replace(/\/rss.*$/, '').replace(/\.xml$/, '');
+    return feed.siteUrl || feed.url.replace(/\/rss.*$/, '').replace(/\.xml$/, '');
   }
   return url;
 }

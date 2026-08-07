@@ -145,28 +145,44 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     setTimeout(() => setRssMessage(null), 3500);
   };
 
+  // 확장 16선 매체 채널 목록
   const mediaList = [
     { name: 'Le Figaro', category: '総合/경제', url: 'https://www.lefigaro.fr' },
     { name: 'Les Échos', category: '경제/테크', url: 'https://www.lesechos.fr' },
     { name: 'Le Parisien', category: '파리 지역/라이프', url: 'https://www.leparisien.fr' },
     { name: 'BFM Business', category: '비즈니스/산업', url: 'https://www.bfmbusiness.bfmtv.com' },
     { name: 'Maddyness', category: '스타트업/테크', url: 'https://www.maddyness.com' },
-    { name: 'FashionNetwork', category: '패션/뷰티', url: 'https://fr.fashionnetwork.com' },
+    { name: 'FashionNetwork', category: '패션/뷰티 전문', url: 'https://fr.fashionnetwork.com' },
     { name: 'Sortir à Paris', category: '팝업/디저트/문화', url: 'https://www.sortiraparis.com' },
-    { name: 'Time Out Paris', category: '트렌드/트렌디 스팟', url: 'https://www.timeout.fr/paris' },
+    { name: 'Time Out Paris', category: '트렌디 스팟', url: 'https://www.timeout.fr/paris' },
+    { name: 'Vogue France', category: '럭셔리 패션/뷰티', url: 'https://www.vogue.fr' },
+    { name: 'L\'Officiel Paris', category: '하이패션 & 팝업', url: 'https://www.lofficiel.com' },
+    { name: 'Elle France', category: '뷰티/트렌드/라이프', url: 'https://www.elle.fr' },
+    { name: 'LSA Conso', category: '유통/신제품 출시', url: 'https://www.lsa-conso.fr' },
+    { name: 'PR Newswire FR', category: '보도자료 배포망', url: 'https://www.prnewswire.com/fr/' },
+    { name: 'Business Wire FR', category: '글로벌 런칭 배포', url: 'https://www.businesswire.com' },
+    { name: 'Cision France', category: '지사 공식 배포', url: 'https://www.cision.fr' },
+    { name: 'JDN (Journal du Net)', category: '디지털/테크 커머스', url: 'https://www.journaldunet.com' },
   ];
 
+  // 정밀 키워드 프리셋 12종
   const presetQueries = [
     { label: '영어 기본', query: `"Paris launch" new product` },
     { label: '프랑스어 기본', query: `"lancement à Paris" produit` },
     { label: '프랑스어 신제품', query: `"sortie à Paris" nouveauté` },
-    { label: '패션위크 신제품', query: `"Paris Fashion Week" new product` },
+    { label: '파리 플래그십', query: `"Paris flagship store" new product` },
+    { label: '파리 팝업스토어', query: `"boutique éphémère" Paris` },
+    { label: '프랑스 공식출시', query: `"disponible en France" nouveau` },
+    { label: '패션위크 런칭', query: `"Paris Fashion Week" new product` },
     { label: '뷰티 파리', query: `beauty Paris launch` },
     { label: '테크 파리', query: `tech Paris launch` },
-    { label: '식음료 파리', query: `food Paris nouveauté` },
+    { label: '미식/디저트', query: `gastronomie Paris nouveauté` },
+    { label: '뷰티 프랑스어', query: `beauté "lancement à Paris"` },
+    { label: '파리 독점공개', query: `"exclusivité Paris" produit` },
   ];
 
-  const recommendedBoolQuery = `("lancement" OR "nouveauté" OR "disponible") AND ("Paris" OR "France") AND (produit OR collection OR ouverture)`;
+  // 고급 3중 정밀 Boolean 검색식
+  const recommendedBoolQuery = `("lancement" OR "nouveauté" OR "disponible" OR "exclusivité" OR "boutique éphémère" OR "pop-up") AND ("Paris" OR "France") AND (produit OR collection OR ouverture OR flagship OR "avant-première")`;
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -192,8 +208,8 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="card-header">
             <div className="icon-wrapper gold"><Search size={20} /></div>
             <div>
-              <h3>Google Alerts & 검색 키워드 조합기</h3>
-              <p className="text-muted">한국어·영어·프랑스어를 조합하여 수집 정확도를 높이세요.</p>
+              <h3>Google Alerts & 정밀 키워드 조합기 (12종)</h3>
+              <p className="text-muted">한국어·영어·프랑스어 파리 특화 쿼리로 수집 정확도를 극대화하세요.</p>
             </div>
           </div>
 
@@ -209,7 +225,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
           <div className="bool-query-box">
             <div className="bool-title">
-              <span>💡 프랑스어 추천 정밀 검색식</span>
+              <span>💡 프랑스어 파리 전용 고급 3중 정밀 검색식</span>
               <button 
                 className="btn-text" 
                 onClick={() => handleCopy(recommendedBoolQuery, 'boolean')}
@@ -218,7 +234,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                 <span>검색식 복사</span>
               </button>
             </div>
-            <textarea readOnly value={recommendedBoolQuery} className="code-textarea" />
+            <textarea readOnly value={recommendedBoolQuery} className="code-textarea" style={{ height: '65px' }} />
           </div>
         </div>
 
@@ -227,12 +243,12 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="card-header">
             <div className="icon-wrapper navy"><Rss size={20} /></div>
             <div>
-              <h3>프랑스 파리 추천 매체 구독 (8선)</h3>
-              <p className="text-muted">카테고리별 현지 매체를 모니터링하여 속보를 탐지하세요.</p>
+              <h3>프랑스 파리 추천 매체 & 보도자료 채널 (16선)</h3>
+              <p className="text-muted">패션, 뷰티, 유통, 테크 및 보도자료 배포망 모니터링</p>
             </div>
           </div>
 
-          <div className="media-grid">
+          <div className="media-grid" style={{ maxHeight: '330px', overflowY: 'auto', paddingRight: '4px' }}>
             {mediaList.map((media, idx) => (
               <a 
                 key={idx} 
