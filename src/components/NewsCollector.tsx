@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, ArrowRight, RefreshCw } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, ArrowRight, RefreshCw, Zap } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles } from '../utils/rssFetcher';
+import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
 
 interface NewsCollectorProps {
   newsList: NewsArticle[];
@@ -22,14 +23,68 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const [isFetchingRss, setIsFetchingRss] = useState<boolean>(false);
   const [rssMessage, setRssMessage] = useState<string | null>(null);
   const [customRssUrl, setCustomRssUrl] = useState<string>('');
+  const [autoImportDirectly, setAutoImportDirectly] = useState<boolean>(false);
+
+  const convertArticleToProduct = (article: NewsArticle): Omit<ProductItem, 'id'> => {
+    const today = new Date().toISOString().split('T')[0];
+    const initialDetails = {
+      isOfficialAnnouncement: true,
+      isAvailableForPurchase: false,
+      isParisExclusive: true,
+      isMajorEvent: false,
+      isTrustedMedia: true,
+    };
+    const { score, level } = calculateImportanceScore(initialDetails);
+
+    return {
+      collectedAt: today,
+      brand: article.suggestedBrand || '미정 브랜드',
+      productName: article.suggestedProduct || article.title,
+      category: article.category,
+      status: 'Inbox',
+      launchDate: '일정 확인 필요',
+      location: article.suggestedLocation || '파리 매장/팝업',
+      price: article.suggestedPrice || '가격 확인 필요',
+      keyFeatures: article.snippet,
+      targetAudience: '파리 현지 소비자 & 직구족',
+      sourceUrl: article.url,
+      sourceName: article.source,
+      reliability: '언론 보도',
+      importance: level,
+      importanceScore: score,
+      scoreDetails: initialDetails,
+      followUp: '공식 보도자료 및 추가 이미지 수집 필요',
+      naverStatus: '대기',
+      instaStatus: '대기',
+      imagePrepared: false,
+    };
+  };
 
   const handleFetchPresetRss = async (feed: RssFeedSource) => {
     setIsFetchingRss(true);
     setRssMessage(`${feed.name} RSS 피드 수집 중...`);
     const articles = await fetchRssArticles(feed);
-    onAddNewsArticles(articles);
+
+    if (autoImportDirectly) {
+      // DB Inbox로 자동 전송
+      let count = 0;
+      const tgConfig = getTelegramConfig();
+      for (const article of articles) {
+        const prod = convertArticleToProduct(article);
+        onImportToInbox(prod);
+        count++;
+        // 텔레그램 연동 시 자동 통보
+        if (tgConfig.enabled) {
+          sendProductApprovalRequest(tgConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
+        }
+      }
+      setRssMessage(`⚡ ${count}개의 RSS 소식이 DB Inbox로 100% 자동 등록되었습니다!`);
+    } else {
+      onAddNewsArticles(articles);
+      setRssMessage(`${feed.name} 피드에서 ${articles.length}개의 수집 항목을 불러왔습니다!`);
+    }
+
     setIsFetchingRss(false);
-    setRssMessage(`${feed.name} 피드에서 ${articles.length}개의 수집 항목을 불러왔습니다!`);
     setTimeout(() => setRssMessage(null), 3500);
   };
 
@@ -41,9 +96,25 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       const articles = await fetchRssArticles(source);
       allNew = [...allNew, ...articles];
     }
-    onAddNewsArticles(allNew);
+
+    if (autoImportDirectly) {
+      let count = 0;
+      const tgConfig = getTelegramConfig();
+      for (const article of allNew) {
+        const prod = convertArticleToProduct(article);
+        onImportToInbox(prod);
+        count++;
+        if (tgConfig.enabled) {
+          sendProductApprovalRequest(tgConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
+        }
+      }
+      setRssMessage(`⚡ 총 ${count}개의 최신 파리 기사가 DB Inbox에 자동 등록 완료되었습니다!`);
+    } else {
+      onAddNewsArticles(allNew);
+      setRssMessage(`총 ${allNew.length}개의 라이브 RSS 소식을 뉴스 수집함으로 가져왔습니다!`);
+    }
+
     setIsFetchingRss(false);
-    setRssMessage(`총 ${allNew.length}개의 라이브 RSS 소식을 뉴스 수집함으로 가져왔습니다!`);
     setTimeout(() => setRssMessage(null), 4000);
   };
 
@@ -59,10 +130,18 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       description: '사용자 지정 RSS 수집원',
     };
     const articles = await fetchRssArticles(customSource);
-    onAddNewsArticles(articles);
+    
+    if (autoImportDirectly) {
+      for (const article of articles) {
+        onImportToInbox(convertArticleToProduct(article));
+      }
+      setRssMessage(`⚡ ${articles.length}개의 뉴스가 DB Inbox에 자동 등록되었습니다.`);
+    } else {
+      onAddNewsArticles(articles);
+      setRssMessage(`${articles.length}개의 뉴스를 수집했습니다.`);
+    }
     setIsFetchingRss(false);
     setCustomRssUrl('');
-    setRssMessage(`${articles.length}개의 뉴스를 수집했습니다.`);
     setTimeout(() => setRssMessage(null), 3500);
   };
 
@@ -87,7 +166,6 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     { label: '식음료 파리', query: `food Paris nouveauté` },
   ];
 
-
   const recommendedBoolQuery = `("lancement" OR "nouveauté" OR "disponible") AND ("Paris" OR "France") AND (produit OR collection OR ouverture)`;
 
   const handleCopy = (text: string, label: string) => {
@@ -97,40 +175,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   };
 
   const handleQuickImport = (article: NewsArticle) => {
-    const today = new Date().toISOString().split('T')[0];
-    const initialDetails = {
-      isOfficialAnnouncement: true,
-      isAvailableForPurchase: false,
-      isParisExclusive: true,
-      isMajorEvent: false,
-      isTrustedMedia: true,
-    };
-    const { score, level } = calculateImportanceScore(initialDetails);
-
-    const newProduct: Omit<ProductItem, 'id'> = {
-      collectedAt: today,
-      brand: article.suggestedBrand || '미정 브랜드',
-      productName: article.suggestedProduct || article.title,
-      category: article.category,
-      status: 'Inbox',
-      launchDate: '일정 확인 필요',
-      location: article.suggestedLocation || '파리 매장/팝업',
-      price: article.suggestedPrice || '가격 확인 필요',
-      keyFeatures: article.snippet,
-      targetAudience: '파리 현지 소비자 & 직구족',
-      sourceUrl: article.url,
-      sourceName: article.source,
-      reliability: '언론 보도',
-      importance: level,
-      importanceScore: score,
-      scoreDetails: initialDetails,
-      followUp: '공식 보도자료 및 추가 이미지 수집 필요',
-      naverStatus: '대기',
-      instaStatus: '대기',
-      imagePrepared: false,
-    };
-
-    onImportToInbox(newProduct);
+    onImportToInbox(convertArticleToProduct(article));
     onRemoveNews(article.id);
   };
 
@@ -213,12 +258,26 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="header-with-badge">
             <div className="icon-wrapper rose"><Bookmark size={20} /></div>
             <div>
-              <h3>실시간 파리 속보 뉴스 & RSS 자동 수집함</h3>
-              <p className="text-muted">라이브 RSS 피드로 현지 속보를 탐지하고 DB Inbox로 추가하세요.</p>
+              <h3>실시간 파리 속보 뉴스 & 신제품 자동 등록 엔진</h3>
+              <p className="text-muted">라이브 RSS 피드 탐지 ➔ 14개 필드 파싱 ➔ DB Inbox 직행 자동 등록</p>
             </div>
           </div>
 
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center" style={{ flexWrap: 'wrap' }}>
+            {/* Auto Import Toggle Switch */}
+            <label className="flex items-center gap-2" style={{ cursor: 'pointer', background: 'rgba(226,184,87,0.12)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-gold)' }}>
+              <input
+                type="checkbox"
+                checked={autoImportDirectly}
+                onChange={(e) => setAutoImportDirectly(e.target.checked)}
+                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              <Zap size={16} className="text-gold" />
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-gold)' }}>
+                {autoImportDirectly ? '⚡ DB Inbox 자동 등록 ON' : 'DB Inbox 자동 등록 OFF'}
+              </span>
+            </label>
+
             <button
               className="btn-primary"
               onClick={handleFetchAllRss}
@@ -226,7 +285,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <RefreshCw size={16} className={isFetchingRss ? 'spin' : ''} />
-              <span>{isFetchingRss ? 'RSS 수집 중...' : '프랑스 미디어 전체 RSS 파싱'}</span>
+              <span>{isFetchingRss ? '자동 수집 중...' : '전체 RSS 파싱 & DB 자동 등록'}</span>
             </button>
           </div>
         </div>
@@ -234,7 +293,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         {/* Live RSS Preset Source Toolbar */}
         <div className="rss-toolbar mb-4" style={{ background: 'var(--bg-card-subtle, rgba(255,255,255,0.04))', padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-gold, #f39c12)' }}>
-            📡 실시간 파리 매체 RSS 파싱 선택:
+            📡 실시간 파리 매체 RSS 선택 수집:
           </div>
           <div className="flex flex-wrap gap-2 mb-3">
             {PRESET_RSS_SOURCES.map((source) => (
@@ -295,12 +354,11 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           </span>
         </div>
 
-
         {filteredNews.length === 0 ? (
           <div className="empty-state">
             <Check size={40} className="text-muted mb-2" />
             <h4>모든 최신 뉴스가 DB Inbox로 수집되었습니다.</h4>
-            <p className="text-muted">상단의 키워드로 새로운 기사를 탐색해보세요!</p>
+            <p className="text-muted">상단의 [전체 RSS 파싱 & DB 자동 등록] 버튼을 눌러보세요!</p>
           </div>
         ) : (
           <div className="news-feed-list">
