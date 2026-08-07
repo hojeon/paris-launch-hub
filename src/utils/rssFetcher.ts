@@ -1,4 +1,4 @@
-import { NewsArticle, RssFeedSource, Category } from '../types';
+import { NewsArticle, RssFeedSource } from '../types';
 
 export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   {
@@ -40,31 +40,29 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
 ];
 
 /**
-  * Fetches and parses RSS Feed items into NewsArticle objects
-  */
+ * Fetches and parses REAL live RSS Feed items with multi-fallback (rss2json + AllOrigins + DOMParser)
+ */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
+  // Strategy 1: rss2json Public API
   try {
-    // Attempt 1: Fetch via rss2json public API proxy
     const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
     const response = await fetch(proxyUrl);
-    
     if (response.ok) {
       const data = await response.json();
-      if (data.status === 'ok' && Array.isArray(data.items)) {
+      if (data.status === 'ok' && Array.isArray(data.items) && data.items.length > 0) {
         return data.items.map((item: any, idx: number) => {
           const title = item.title || '제목 없음';
           const rawSnippet = item.description || item.content || '';
-          // Strip HTML tags for clean snippet text
           const snippet = rawSnippet.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
           const articleUrl = sanitizeArticleUrl(item.link || item.guid, feed);
-          
+
           return {
-            id: `rss-${Date.now()}-${idx}`,
-            title,
+            id: `rss-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+            title: title.trim(),
             source: feed.name,
             publishedAt: item.pubDate ? item.pubDate.split(' ')[0] : new Date().toISOString().split('T')[0],
             url: articleUrl,
-            snippet: snippet || title,
+            snippet: snippet.trim() || title,
             category: feed.category,
             suggestedBrand: extractBrandFromTitle(title) || feed.name,
             suggestedProduct: title,
@@ -75,12 +73,53 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         });
       }
     }
-  } catch (error) {
-    console.warn(`[RSS Proxy Warning] Failed to fetch via proxy for ${feed.name}. Trying XML fallback:`, error);
+  } catch (err) {
+    console.warn(`rss2json failed for ${feed.name}, trying DOMParser relay...`, err);
   }
 
-  // Fallback: Dummy sample RSS items if CORS or external network is restricted
-  return generateFallbackRssArticles(feed);
+  // Strategy 2: AllOrigins Raw Proxy + DOMParser (Parses REAL XML items from French media)
+  try {
+    const rawProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed.url)}`;
+    const res = await fetch(rawProxyUrl);
+    if (res.ok) {
+      const xmlText = await res.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      const items = Array.from(xmlDoc.querySelectorAll('item'));
+
+      if (items.length > 0) {
+        return items.slice(0, 8).map((item, idx) => {
+          const title = item.querySelector('title')?.textContent || '제목 없음';
+          const link = item.querySelector('link')?.textContent || item.querySelector('guid')?.textContent || feed.siteUrl;
+          const description = item.querySelector('description')?.textContent || '';
+          const pubDate = item.querySelector('pubDate')?.textContent || '';
+
+          const snippet = description.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
+          const articleUrl = sanitizeArticleUrl(link, feed);
+
+          return {
+            id: `rss-xml-${Date.now()}-${idx}`,
+            title: title.trim(),
+            source: feed.name,
+            publishedAt: pubDate ? new Date(pubDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            url: articleUrl,
+            snippet: snippet.trim() || title,
+            category: feed.category,
+            suggestedBrand: extractBrandFromTitle(title) || feed.name,
+            suggestedProduct: title,
+            suggestedLocation: '파리 매장 / 온라인',
+            suggestedPrice: '가격 미정',
+            isParsed: false,
+          };
+        });
+      }
+    }
+  } catch (err) {
+    console.warn(`DOMParser relay failed for ${feed.name}:`, err);
+  }
+
+  // If live RSS is blocked by network, return empty list instead of duplicate dummy items
+  return [];
 }
 
 function sanitizeArticleUrl(url: string | undefined, feed: RssFeedSource): string {
@@ -96,40 +135,4 @@ function extractBrandFromTitle(title: string): string {
     return words[0];
   }
   return '';
-}
-
-function generateFallbackRssArticles(feed: RssFeedSource): NewsArticle[] {
-  const today = new Date().toISOString().split('T')[0];
-  const targetSiteUrl = (feed as any).siteUrl || 'https://www.lefigaro.fr/economie';
-
-  return [
-    {
-      id: `rss-fb-${Date.now()}-1`,
-      title: `[${feed.name}] 파리 독점 출시 신제품 팝업 스토어 오픈`,
-      source: feed.name,
-      publishedAt: today,
-      url: targetSiteUrl,
-      snippet: `프랑스 파리 중심가에서 선보이는 ${feed.category} 카테고리의 한정판 신제품 출시 소식입니다.`,
-      category: feed.category,
-      suggestedBrand: 'Paris Exclusive',
-      suggestedProduct: `${feed.category} 한정판 컬렉션`,
-      suggestedLocation: '파리 마레 지구 팝업스토어',
-      suggestedPrice: '€120 ~ €450',
-      isParsed: false,
-    },
-    {
-      id: `rss-fb-${Date.now()}-2`,
-      title: `[${feed.name}] 2026 파리 시즌 신제품 공식 프리뷰`,
-      source: feed.name,
-      publishedAt: today,
-      url: targetSiteUrl,
-      snippet: `현지 언론이 주목하는 새로운 파리 런칭 컬렉션의 핵심 사양 및 가격 정보 브리핑.`,
-      category: feed.category,
-      suggestedBrand: 'Maison de Paris',
-      suggestedProduct: `2026 파리 런칭 에디션`,
-      suggestedLocation: '파리 샹젤리제 플래그십',
-      suggestedPrice: '€89',
-      isParsed: false,
-    },
-  ];
 }
