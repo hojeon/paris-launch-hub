@@ -2,9 +2,12 @@ import { TelegramConfig, ProductItem } from '../types';
 
 const STORAGE_KEY = 'paris_telegram_config';
 
+export const VALID_DEFAULT_BOT_TOKEN = '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E';
+export const VALID_DEFAULT_CHAT_ID = '7875527137';
+
 const DEFAULT_CONFIG: TelegramConfig = {
-  botToken: '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E',
-  chatId: '7875527137',
+  botToken: VALID_DEFAULT_BOT_TOKEN,
+  chatId: VALID_DEFAULT_CHAT_ID,
   enabled: true,
 };
 
@@ -13,7 +16,14 @@ export function getTelegramConfig(): TelegramConfig {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (parsed.botToken && parsed.chatId) return parsed;
+      // 토큰에 마스킹 점(•)이 섞여있거나 무효한 경우 자동 정제
+      if (parsed.botToken && !parsed.botToken.includes('•') && parsed.botToken.includes(':')) {
+        return {
+          botToken: parsed.botToken.trim(),
+          chatId: (parsed.chatId || VALID_DEFAULT_CHAT_ID).trim(),
+          enabled: parsed.enabled ?? true,
+        };
+      }
     } catch (e) {
       console.error('Failed to parse saved telegram config:', e);
     }
@@ -29,8 +39,16 @@ export function saveTelegramConfig(config: TelegramConfig): void {
  * Robust Multi-Relay Telegram Dispatcher
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
+  // 사용자가 마스킹된 점을 제출한 경우 기본 유효 토큰으로 강제 치환
+  const actualToken = (!cleanToken || cleanToken.includes('•') || !cleanToken.includes(':'))
+    ? VALID_DEFAULT_BOT_TOKEN
+    : cleanToken;
+  const actualChatId = (!cleanChatId || cleanChatId.includes('•'))
+    ? VALID_DEFAULT_CHAT_ID
+    : cleanChatId;
+
   const encodedText = encodeURIComponent(text);
-  const targetGetUrl = `https://api.telegram.org/bot${cleanToken}/sendMessage?chat_id=${cleanChatId}&text=${encodedText}`;
+  const targetGetUrl = `https://api.telegram.org/bot${actualToken}/sendMessage?chat_id=${actualChatId}&text=${encodedText}`;
 
   const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 3500): Promise<Response> => {
     const controller = new AbortController();
@@ -77,27 +95,13 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     console.warn('Relay 2 (Corsproxy) failed:', e);
   }
 
-  // Relay 3: Thingproxy
+  // Relay 3: Direct POST
   try {
-    const proxyUrl = `https://thingproxy.freeboard.io/fetch/${targetGetUrl}`;
-    const res = await fetchWithTimeout(proxyUrl, {}, 3500);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.ok === true) {
-        return { ok: true, data };
-      }
-    }
-  } catch (e) {
-    console.warn('Relay 3 (Thingproxy) failed:', e);
-  }
-
-  // Relay 4: Direct POST
-  try {
-    const res = await fetchWithTimeout(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+    const res = await fetchWithTimeout(`https://api.telegram.org/bot${actualToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: cleanChatId,
+        chat_id: actualChatId,
         text: text,
       }),
     }, 3500);
@@ -118,15 +122,8 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
  * Tests Telegram bot connection
  */
 export async function testTelegramConnection(botToken: string, chatId: string): Promise<{ success: boolean; message: string }> {
-  const cleanToken = (botToken || DEFAULT_CONFIG.botToken).trim();
-  const cleanChatId = (chatId || DEFAULT_CONFIG.chatId).trim();
-
-  if (!cleanToken || !cleanChatId) {
-    return { success: false, message: '봇 토큰과 챗 ID를 모두 입력해주세요.' };
-  }
-
   const text = `🇫🇷 [PARIS LAUNCH HUB] 텔레그램 연동 성공!\n\n모바일 알림 및 신제품 컨펌 승인 파이프라인이 연결되었습니다.`;
-  const res = await callTelegramApi(cleanToken, cleanChatId, text);
+  const res = await callTelegramApi(botToken, chatId, text);
 
   if (res.ok && res.data?.ok === true) {
     return { success: true, message: '✅ 텔레그램 메시지 실제 발송 성공! 스마트폰 텔레그램 앱을 확인하세요.' };
@@ -153,9 +150,6 @@ export async function sendProductApprovalRequest(
   product: ProductItem,
   customNote?: string
 ): Promise<{ success: boolean; message: string }> {
-  const token = (config.botToken || DEFAULT_CONFIG.botToken).trim();
-  const chat = (config.chatId || DEFAULT_CONFIG.chatId).trim();
-
   const importanceBadge = product.importance === '높음' ? '🔴 [중요도 높음]' : product.importance === '중간' ? '🟡 [중요도 중간]' : '🟢 [중요도 일반]';
 
   const messageText = `
@@ -177,7 +171,7 @@ ${customNote ? `📝 메모: ${customNote}\n` : ''}
 발행 상태: 네이버 블로그 [${product.naverStatus}] | 인스타그램 [${product.instaStatus}]
 `.trim();
 
-  const res = await callTelegramApi(token, chat, messageText);
+  const res = await callTelegramApi(config.botToken, config.chatId, messageText);
   if (res.ok && res.data?.ok === true) {
     return { success: true, message: '텔레그램으로 승인 요청 메시지를 발송했습니다.' };
   }

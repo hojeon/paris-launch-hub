@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TelegramConfig } from '../types';
-import { getTelegramConfig, saveTelegramConfig, testTelegramConnection } from '../utils/telegramService';
+import { getTelegramConfig, saveTelegramConfig, testTelegramConnection, VALID_DEFAULT_BOT_TOKEN, VALID_DEFAULT_CHAT_ID } from '../utils/telegramService';
 import { Send, X, CheckCircle, AlertCircle, Info, ExternalLink, Zap, Eye, EyeOff } from 'lucide-react';
 
 interface TelegramSettingsModalProps {
@@ -15,8 +15,8 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
   onConfigSaved,
 }) => {
   const [config, setConfig] = useState<TelegramConfig>({
-    botToken: '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E',
-    chatId: '7875527137',
+    botToken: VALID_DEFAULT_BOT_TOKEN,
+    chatId: VALID_DEFAULT_CHAT_ID,
     enabled: true,
   });
 
@@ -27,6 +27,13 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       const current = getTelegramConfig();
+      // 마스킹 점이 섞인 토큰은 유효 토큰으로 정제
+      if (!current.botToken || current.botToken.includes('•') || !current.botToken.includes(':')) {
+        current.botToken = VALID_DEFAULT_BOT_TOKEN;
+      }
+      if (!current.chatId || current.chatId.includes('•')) {
+        current.chatId = VALID_DEFAULT_CHAT_ID;
+      }
       setConfig(current);
       setTestResult(null);
     }
