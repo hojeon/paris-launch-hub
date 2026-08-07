@@ -43,9 +43,17 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestResult(null);
-    const result = await testTelegramConnection(config.botToken, config.chatId);
-    setIsTesting(false);
-    setTestResult(result);
+    try {
+      const result = await testTelegramConnection(config.botToken, config.chatId);
+      setTestResult(result);
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: `❌ 네트워크 오류: ${err.message || '요청 중 예외가 발생했습니다.'}`
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
