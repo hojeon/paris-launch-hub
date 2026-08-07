@@ -84,6 +84,18 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
                 봇 토큰과 챗 ID(<code>7875527137</code>)가 사전 세팅되었습니다.<br />
                 텔레그램 앱에서 <code>@pcds75bot</code> 봇에게 <strong>/start</strong>를 1회 보내두시면 즉시 수신 가능합니다.
               </p>
+              <div style={{ marginTop: '8px' }}>
+                <a
+                  href="https://t.me/pcds75bot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-text inline-flex items-center gap-1"
+                  style={{ color: '#2563eb', fontWeight: 600, fontSize: '0.85rem' }}
+                >
+                  <span>📲 텔레그램 스마트폰 앱에서 @pcds75bot 봇 직통 열기</span>
+                  <ExternalLink size={14} />
+                </a>
+              </div>
             </div>
           </div>
 
@@ -138,7 +150,23 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
           {testResult && (
             <div className={`alert-box ${testResult.success ? 'success' : 'warning'} mb-4`}>
               {testResult.success ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-              <span>{testResult.message}</span>
+              <div>
+                <span>{testResult.message}</span>
+                {!testResult.success && (
+                  <div style={{ marginTop: '6px' }}>
+                    <a
+                      href={`https://api.telegram.org/bot${config.botToken}/sendMessage?chat_id=${config.chatId}&text=${encodeURIComponent('🇫🇷 [PARIS LAUNCH HUB] 1-Click 직통 텔레그램 연동 성공!')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-text inline-flex items-center gap-1"
+                      style={{ color: '#d97706', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'underline' }}
+                    >
+                      <span>👉 1-Click 직통 수동 발송 링크 누르기</span>
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

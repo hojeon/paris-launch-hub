@@ -28,64 +28,61 @@ export default {
         const chat = (body.chatId || '7875527137').trim();
         const text = body.text || '테스트 메세지';
 
-        const encodedText = encodeURIComponent(text);
-        const targetGetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
-
-        // Strategy 1: Server-side CORS Proxy (corsproxy.io)
+        // 1. Direct Telegram Form-UrlEncoded POST (Most Reliable for Telegram API)
         try {
-          const proxyUrl1 = `https://corsproxy.io/?${encodeURIComponent(targetGetUrl)}`;
-          const res1 = await fetch(proxyUrl1);
-          if (res1.ok) {
-            const data1 = await res1.json();
-            if (data1 && data1.ok) {
-              return new Response(JSON.stringify(data1), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-              });
-            }
+          const formData = new URLSearchParams();
+          formData.append('chat_id', chat);
+          formData.append('text', text);
+
+          const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString(),
+          });
+
+          const data = await tgRes.json();
+          if (data && data.ok) {
+            return new Response(JSON.stringify(data), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            });
           }
         } catch (e) {
-          console.warn('Strategy 1 failed:', e);
+          console.warn('Form-UrlEncoded POST failed:', e);
         }
 
-        // Strategy 2: Server-side Relay (allorigins.win)
+        // 2. Direct JSON POST
         try {
-          const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
-          const res2 = await fetch(proxyUrl2);
-          if (res2.ok) {
-            const data2 = await res2.json();
-            if (data2 && data2.ok) {
-              return new Response(JSON.stringify(data2), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-              });
-            }
-          }
-        } catch (e) {
-          console.warn('Strategy 2 failed:', e);
-        }
-
-        // Strategy 3: Server Direct POST to Telegram
-        try {
-          const res3 = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: chat, text: text }),
           });
-          if (res3.ok) {
-            const data3 = await res3.json();
-            if (data3 && data3.ok) {
-              return new Response(JSON.stringify(data3), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-              });
-            }
+          const data = await tgRes.json();
+          if (data && data.ok) {
+            return new Response(JSON.stringify(data), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            });
           }
         } catch (e) {
-          console.warn('Strategy 3 failed:', e);
+          console.warn('JSON POST failed:', e);
         }
 
-        return new Response(JSON.stringify({ ok: false, description: 'Telegram API Matrix All Relays Failed' }), {
+        // 3. CORS Proxy Fallback
+        try {
+          const encodedText = encodeURIComponent(text);
+          const targetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+          const pRes = await fetch(proxyUrl);
+          const pData = await pRes.json();
+          return new Response(JSON.stringify(pData), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          });
+        } catch (e) {}
+
+        return new Response(JSON.stringify({ ok: false, description: 'Telegram API Server Timeout' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         });
