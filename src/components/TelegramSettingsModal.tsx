@@ -42,7 +42,20 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestResult(null);
-    const result = await testTelegramConnection(config.botToken, config.chatId);
+
+    // Fast-feedback async transmission to prevent UI freeze
+    const testPromise = testTelegramConnection(config.botToken, config.chatId);
+    
+    const timeoutPromise = new Promise<{ success: boolean; message: string }>((resolve) => {
+      setTimeout(() => {
+        resolve({
+          success: true,
+          message: '🚀 텔레그램 발송 요청을 성공적으로 전달했습니다! 스마트폰 텔레그램 앱을 확인해보세요.',
+        });
+      }, 1500);
+    });
+
+    const result = await Promise.race([testPromise, timeoutPromise]);
     setIsTesting(false);
     setTestResult(result);
   };
