@@ -29,8 +29,7 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Cloudflare Worker Edge Relay Dispatcher
- * 브라우저 통신사 방화벽을 100% 우회하는 Cloudflare Worker 서버리스 백엔드 릴레이 (/api/telegram)
+ * Cloudflare Worker Edge Relay Dispatcher (v2.0)
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
   const token = (cleanToken || DEFAULT_BOT_TOKEN).trim();
@@ -90,7 +89,7 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     console.warn('Fallback Relay (AllOrigins) failed:', e);
   }
 
-  return { ok: false, error: '텔레그램 API 타임아웃' };
+  return { ok: false, error: '[v2.0 엣지릴레이] 텔레그램 API 타임아웃' };
 }
 
 /**
@@ -114,7 +113,7 @@ export async function testTelegramConnection(botToken: string, chatId: string): 
     return { success: false, message: failReason };
   }
 
-  return { success: false, message: `❌ 발송 실패: ${res.error || '텔레그램 API 타임아웃'}` };
+  return { success: false, message: `❌ 발송 실패: ${res.error || '[v2.0 엣지릴레이] 텔레그램 API 타임아웃'}` };
 }
 
 /**
