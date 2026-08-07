@@ -115,7 +115,7 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
                 type="button" 
                 className="btn-text" 
                 onClick={() => setShowToken(!showToken)}
-                style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                style={{ fontSize: '0.75rem', display: 'flex', itemsCenter: 'center', gap: '4px' }}
               >
                 {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
                 <span>{showToken ? '숨기기' : '보기'}</span>
@@ -143,28 +143,32 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
             />
           </div>
 
-          {/* Direct Link Banner */}
-          {config.botToken && config.chatId && (
-            <div className="alert-box mb-4" style={{ background: '#f8fafc', border: '1px solid var(--border-gold)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div className="flex justify-between items-center">
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-gold)' }}>
-                  ⚡ 브라우저 팝업 차단 우회 - 1초 직통 테스트 딥링크:
-                </span>
+          {/* Direct Link Banner Always Visible when values entered */}
+          <div className="alert-box mb-4" style={{ background: 'rgba(217, 119, 6, 0.08)', border: '1px solid var(--border-gold)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div className="flex justify-between items-center" style={{ flexWrap: 'wrap', gap: '6px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-gold)' }}>
+                ⚡ 1초 직통 테스트 딥링크 (CORS 방화벽 100% 우회):
+              </span>
+              {getDirectTelegramUrl() ? (
                 <a
                   href={getDirectTelegramUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-primary btn-xs"
-                  style={{ textDecoration: 'none' }}
+                  className="btn-primary btn-xs flex items-center gap-1"
+                  style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #d97706, #b45309)' }}
                 >
-                  직통 메세지 전송 탭 열기 <ExternalLink size={12} />
+                  <Zap size={12} />
+                  <span>직통 메세지 전송 탭 열기</span>
+                  <ExternalLink size={12} />
                 </a>
-              </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                위 버튼을 누르시면 브라우저에서 직접 텔레그램 메세지가 전송되며 앱에 띵동! 수신됩니다.
-              </span>
+              ) : (
+                <span className="text-muted" style={{ fontSize: '0.75rem' }}>봇 토큰과 챗 ID를 입력하면 활성화됩니다</span>
+              )}
             </div>
-          )}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              위 버튼을 누르시면 브라우저가 직접 텔레그램 메세지를 전송하며 스마트폰 텔레그램 앱에 띵동! 수신됩니다.
+            </span>
+          </div>
 
           {/* Test Status Result */}
           {testResult && (
