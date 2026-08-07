@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ProductItem, ProductStatus, Category, Reliability, Importance } from '../types';
+import { ProductItem, ProductStatus, Category, Reliability, Importance, TelegramConfig } from '../types';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
+import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
 import { 
   Filter, Search, ArrowUpDown, Edit3, Trash2, ExternalLink, 
-  CheckCircle2, AlertCircle, Sparkles, LayoutGrid, List, Sliders, ChevronDown 
+  CheckCircle2, AlertCircle, Sparkles, LayoutGrid, List, Sliders, ChevronDown, Send, Check 
 } from 'lucide-react';
 
 interface ProductTrackerProps {
@@ -11,7 +12,9 @@ interface ProductTrackerProps {
   onUpdateProduct: (product: ProductItem) => void;
   onDeleteProduct: (id: string) => void;
   onSelectForContent: (product: ProductItem) => void;
+  telegramConfig?: TelegramConfig;
 }
+
 
 export const ProductTracker: React.FC<ProductTrackerProps> = ({
   products,
@@ -75,8 +78,22 @@ export const ProductTracker: React.FC<ProductTrackerProps> = ({
     }
   };
 
+  const handleSendTelegramApproval = async (item: ProductItem) => {
+    const config = getTelegramConfig();
+    const result = await sendProductApprovalRequest(config, item);
+    alert(result.message);
+    if (result.success) {
+      onUpdateProduct({
+        ...item,
+        telegramStatus: '컨펌 대기중',
+        telegramSentAt: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+      });
+    }
+  };
+
   return (
     <div className="tracker-container">
+
       {/* Top Filter Bar */}
       <div className="card shadow-md mb-4">
         <div className="tracker-controls">
@@ -217,6 +234,13 @@ export const ProductTracker: React.FC<ProductTrackerProps> = ({
                     <td className="text-xs text-muted max-w-xs">{item.followUp}</td>
                     <td>
                       <div className="action-buttons">
+                        <button
+                          className="btn-icon"
+                          title="텔레그램으로 컨펌 요청 전송"
+                          onClick={() => handleSendTelegramApproval(item)}
+                        >
+                          <Send size={16} className={item.telegramStatus ? 'text-gold' : ''} />
+                        </button>
                         <button
                           className="btn-icon"
                           title="콘텐츠 생성기로 전송"

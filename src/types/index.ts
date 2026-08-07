@@ -8,6 +8,23 @@ export type Importance = '높음' | '중간' | '낮음';
 
 export type PublishStatus = '대기' | '원고 완료' | '카드뉴스 완료' | '발행 완료';
 
+export type TelegramStatus = '미전송' | '컨펌 대기중' | '승인 완료' | '보류';
+
+export interface TelegramConfig {
+  botToken: string;
+  chatId: string;
+  enabled: boolean;
+}
+
+export interface RssFeedSource {
+  id: string;
+  name: string;
+  url: string;
+  category: Category;
+  description: string;
+  isPreset?: boolean;
+}
+
 export interface ScoreDetails {
   isOfficialAnnouncement: boolean; // +3
   isAvailableForPurchase: boolean; // +3
@@ -44,6 +61,10 @@ export interface ProductItem {
   naverUrl?: string;
   instaUrl?: string;
   reusable?: boolean;
+
+  // 텔레그램 승인 관리
+  telegramStatus?: TelegramStatus;
+  telegramSentAt?: string;
 }
 
 export interface NewsArticle {
@@ -60,3 +81,4 @@ export interface NewsArticle {
   suggestedPrice: string;
   isParsed: boolean;
 }
+

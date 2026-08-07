@@ -1,10 +1,13 @@
 import React from 'react';
-import { Newspaper, Database, Sparkles, Calendar, PlusCircle, Compass } from 'lucide-react';
+import { Newspaper, Database, Sparkles, Calendar, PlusCircle, Send } from 'lucide-react';
+import { TelegramConfig } from '../types';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenAddModal: () => void;
+  onOpenTelegramModal: () => void;
+  telegramConfig: TelegramConfig;
   inboxCount: number;
 }
 
@@ -12,6 +15,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onOpenAddModal,
+  onOpenTelegramModal,
+  telegramConfig,
   inboxCount,
 }) => {
   return (
@@ -33,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('collector')}
           >
             <Newspaper size={18} />
-            <span>뉴스 수집 & 알림</span>
+            <span>뉴스 수집 & RSS</span>
             {inboxCount > 0 && <span className="badge-count">{inboxCount}</span>}
           </button>
 
@@ -50,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('factory')}
           >
             <Sparkles size={18} />
-            <span>콘텐츠 팩토리 (블로그/인스타)</span>
+            <span>콘텐츠 팩토리</span>
           </button>
 
           <button
@@ -63,7 +68,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Right Action */}
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            className={`btn-secondary ${telegramConfig.enabled ? 'connected' : ''}`}
+            onClick={onOpenTelegramModal}
+            title="텔레그램 알림 & 승인 파이프라인 설정"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Send size={16} />
+            <span>텔레그램 {telegramConfig.enabled ? '연동됨' : '설정'}</span>
+          </button>
+
           <button className="btn-primary" onClick={onOpenAddModal}>
             <PlusCircle size={16} />
             <span>신제품 수동 등록</span>
@@ -73,3 +88,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

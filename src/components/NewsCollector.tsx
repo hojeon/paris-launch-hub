@@ -1,21 +1,70 @@
 import React, { useState } from 'react';
-import { NewsArticle, ProductItem } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, ArrowRight } from 'lucide-react';
+import { NewsArticle, ProductItem, RssFeedSource } from '../types';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, ArrowRight, RefreshCw } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
+import { PRESET_RSS_SOURCES, fetchRssArticles } from '../utils/rssFetcher';
 
 interface NewsCollectorProps {
   newsList: NewsArticle[];
   onImportToInbox: (product: Omit<ProductItem, 'id'>) => void;
   onRemoveNews: (newsId: string) => void;
+  onAddNewsArticles: (newArticles: NewsArticle[]) => void;
 }
 
 export const NewsCollector: React.FC<NewsCollectorProps> = ({
   newsList,
   onImportToInbox,
   onRemoveNews,
+  onAddNewsArticles,
 }) => {
   const [copiedQuery, setCopiedQuery] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('전체');
+  const [isFetchingRss, setIsFetchingRss] = useState<boolean>(false);
+  const [rssMessage, setRssMessage] = useState<string | null>(null);
+  const [customRssUrl, setCustomRssUrl] = useState<string>('');
+
+  const handleFetchPresetRss = async (feed: RssFeedSource) => {
+    setIsFetchingRss(true);
+    setRssMessage(`${feed.name} RSS 피드 수집 중...`);
+    const articles = await fetchRssArticles(feed);
+    onAddNewsArticles(articles);
+    setIsFetchingRss(false);
+    setRssMessage(`${feed.name} 피드에서 ${articles.length}개의 수집 항목을 불러왔습니다!`);
+    setTimeout(() => setRssMessage(null), 3500);
+  };
+
+  const handleFetchAllRss = async () => {
+    setIsFetchingRss(true);
+    setRssMessage('전체 프랑스 언론사 라이브 RSS 피드 파싱 중...');
+    let allNew: NewsArticle[] = [];
+    for (const source of PRESET_RSS_SOURCES) {
+      const articles = await fetchRssArticles(source);
+      allNew = [...allNew, ...articles];
+    }
+    onAddNewsArticles(allNew);
+    setIsFetchingRss(false);
+    setRssMessage(`총 ${allNew.length}개의 라이브 RSS 소식을 뉴스 수집함으로 가져왔습니다!`);
+    setTimeout(() => setRssMessage(null), 4000);
+  };
+
+  const handleFetchCustomRss = async () => {
+    if (!customRssUrl.trim()) return;
+    setIsFetchingRss(true);
+    setRssMessage('커스텀 RSS 피드 주소 파싱 중...');
+    const customSource: RssFeedSource = {
+      id: `rss-custom-${Date.now()}`,
+      name: '커스텀 RSS 피드',
+      url: customRssUrl.trim(),
+      category: '기타',
+      description: '사용자 지정 RSS 수집원',
+    };
+    const articles = await fetchRssArticles(customSource);
+    onAddNewsArticles(articles);
+    setIsFetchingRss(false);
+    setCustomRssUrl('');
+    setRssMessage(`${articles.length}개의 뉴스를 수집했습니다.`);
+    setTimeout(() => setRssMessage(null), 3500);
+  };
 
   const mediaList = [
     { name: 'Le Figaro', category: '総合/경제', url: 'https://www.lefigaro.fr' },
@@ -37,6 +86,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     { label: '테크 파리', query: `tech Paris launch` },
     { label: '식음료 파리', query: `food Paris nouveauté` },
   ];
+
 
   const recommendedBoolQuery = `("lancement" OR "nouveauté" OR "disponible") AND ("Paris" OR "France") AND (produit OR collection OR ouverture)`;
 
@@ -157,17 +207,78 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         </div>
       </div>
 
-      {/* 2. Bottom Section: Live Feed to DB Inbox Import */}
+      {/* 2. Bottom Section: Live Feed to DB Inbox Import & Live RSS Fetcher */}
       <div className="card shadow-md margin-top-lg">
-        <div className="card-header space-between">
+        <div className="card-header space-between" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div className="header-with-badge">
             <div className="icon-wrapper rose"><Bookmark size={20} /></div>
             <div>
-              <h3>실시간 파리 속보 뉴스 & 1-Click DB 수집함</h3>
-              <p className="text-muted">탐지된 뉴스를 확인하고 바로 DB Inbox로 가져오세요.</p>
+              <h3>실시간 파리 속보 뉴스 & RSS 자동 수집함</h3>
+              <p className="text-muted">라이브 RSS 피드로 현지 속보를 탐지하고 DB Inbox로 추가하세요.</p>
             </div>
           </div>
 
+          <div className="flex gap-2 items-center">
+            <button
+              className="btn-primary"
+              onClick={handleFetchAllRss}
+              disabled={isFetchingRss}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RefreshCw size={16} className={isFetchingRss ? 'spin' : ''} />
+              <span>{isFetchingRss ? 'RSS 수집 중...' : '프랑스 미디어 전체 RSS 파싱'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Live RSS Preset Source Toolbar */}
+        <div className="rss-toolbar mb-4" style={{ background: 'var(--bg-card-subtle, rgba(255,255,255,0.04))', padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-gold, #f39c12)' }}>
+            📡 실시간 파리 매체 RSS 파싱 선택:
+          </div>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {PRESET_RSS_SOURCES.map((source) => (
+              <button
+                key={source.id}
+                className="btn-secondary btn-sm"
+                onClick={() => handleFetchPresetRss(source)}
+                disabled={isFetchingRss}
+                style={{ fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Rss size={12} />
+                <span>{source.name}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Custom RSS URL Input */}
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              placeholder="커스텀 RSS XML URL 입력 (예: https://example.com/rss.xml)"
+              value={customRssUrl}
+              onChange={(e) => setCustomRssUrl(e.target.value)}
+              className="input-field"
+              style={{ fontSize: '0.85rem', padding: '6px 12px', flex: 1 }}
+            />
+            <button
+              className="btn-secondary btn-sm"
+              onClick={handleFetchCustomRss}
+              disabled={isFetchingRss || !customRssUrl.trim()}
+            >
+              커스텀 RSS 수집
+            </button>
+          </div>
+
+          {rssMessage && (
+            <div className="alert-box info mt-2" style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
+              <RefreshCw size={14} className={isFetchingRss ? 'spin' : ''} />
+              <span>{rssMessage}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="filter-bar flex justify-between items-center mb-3">
           <div className="filter-chips">
             {['전체', '패션', '뷰티', '식품', '테크'].map(cat => (
               <button
@@ -179,7 +290,11 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               </button>
             ))}
           </div>
+          <span className="text-muted" style={{ fontSize: '0.85rem' }}>
+            수집 대기 기사: <strong>{filteredNews.length}</strong>건
+          </span>
         </div>
+
 
         {filteredNews.length === 0 ? (
           <div className="empty-state">

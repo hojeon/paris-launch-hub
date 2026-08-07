@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { ProductItem, NewsArticle, PublishStatus } from './types';
+import { ProductItem, NewsArticle, PublishStatus, TelegramConfig } from './types';
 import { INITIAL_PRODUCTS, INITIAL_NEWS } from './utils/sampleData';
+import { getTelegramConfig } from './utils/telegramService';
 import { Navbar } from './components/Navbar';
 import { NewsCollector } from './components/NewsCollector';
 import { ProductTracker } from './components/ProductTracker';
 import { ContentFactory } from './components/ContentFactory';
 import { PublishingCalendar } from './components/PublishingCalendar';
 import { AddProductModal } from './components/AddProductModal';
+import { TelegramSettingsModal } from './components/TelegramSettingsModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('tracker');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState<boolean>(false);
+
+  const [telegramConfig, setTelegramConfig] = useState<TelegramConfig>(() => getTelegramConfig());
 
   // LocalStorage State Initialization
   const [products, setProducts] = useState<ProductItem[]>(() => {
@@ -44,6 +49,10 @@ export const App: React.FC = () => {
 
   const handleRemoveNews = (newsId: string) => {
     setNewsList((prev) => prev.filter((n) => n.id !== newsId));
+  };
+
+  const handleAddNewsArticles = (newArticles: NewsArticle[]) => {
+    setNewsList((prev) => [...newArticles, ...prev]);
   };
 
   const handleUpdateProduct = (updated: ProductItem) => {
@@ -84,6 +93,8 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenTelegramModal={() => setIsTelegramModalOpen(true)}
+        telegramConfig={telegramConfig}
         inboxCount={newsList.length}
       />
 
@@ -94,6 +105,7 @@ export const App: React.FC = () => {
             newsList={newsList}
             onImportToInbox={handleImportToInbox}
             onRemoveNews={handleRemoveNews}
+            onAddNewsArticles={handleAddNewsArticles}
           />
         )}
 
@@ -103,6 +115,7 @@ export const App: React.FC = () => {
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
             onSelectForContent={handleSelectForContent}
+            telegramConfig={telegramConfig}
           />
         )}
 
@@ -129,8 +142,16 @@ export const App: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onAddProduct={handleImportToInbox}
       />
+
+      {/* Telegram Settings Modal */}
+      <TelegramSettingsModal
+        isOpen={isTelegramModalOpen}
+        onClose={() => setIsTelegramModalOpen(false)}
+        onConfigSaved={(cfg) => setTelegramConfig(cfg)}
+      />
     </div>
   );
 };
 
 export default App;
+
