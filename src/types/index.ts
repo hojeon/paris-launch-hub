@@ -20,6 +20,7 @@ export interface RssFeedSource {
   id: string;
   name: string;
   url: string;
+  siteUrl?: string;
   category: Category;
   description: string;
   isPreset?: boolean;
@@ -81,4 +82,3 @@ export interface NewsArticle {
   suggestedPrice: string;
   isParsed: boolean;
 }
-
