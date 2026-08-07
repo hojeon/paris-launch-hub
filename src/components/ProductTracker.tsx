@@ -15,7 +15,6 @@ interface ProductTrackerProps {
   telegramConfig?: TelegramConfig;
 }
 
-
 export const ProductTracker: React.FC<ProductTrackerProps> = ({
   products,
   onUpdateProduct,
@@ -191,7 +190,7 @@ export const ProductTracker: React.FC<ProductTrackerProps> = ({
                 <th>파리 출시일</th>
                 <th>장소</th>
                 <th>가격</th>
-                <th>신뢰도</th>
+                <th>신뢰도 & 원문 출처 🔗</th>
                 <th>후속 조치</th>
                 <th>액션</th>
               </tr>
@@ -230,7 +229,26 @@ export const ProductTracker: React.FC<ProductTrackerProps> = ({
                     <td className="text-sm font-medium">{item.launchDate}</td>
                     <td className="text-xs text-muted max-w-xs">{item.location}</td>
                     <td className="text-sm font-semibold text-gold">{item.price}</td>
-                    <td className="text-xs">{item.reliability}</td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span className="text-xs font-semibold">{item.reliability}</span>
+                        {item.sourceUrl ? (
+                          <a
+                            href={item.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-text text-xs"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'underline' }}
+                            title={item.sourceName || '출처 원문 읽기'}
+                          >
+                            <span>{item.sourceName || '원문 출처'}</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted">출처 미등록</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="text-xs text-muted max-w-xs">{item.followUp}</td>
                     <td>
                       <div className="action-buttons">
@@ -299,6 +317,20 @@ export const ProductTracker: React.FC<ProductTrackerProps> = ({
                         <span>📍 {item.location}</span>
                         <span className="text-gold font-semibold">💶 {item.price}</span>
                       </div>
+
+                      {item.sourceUrl && (
+                        <div style={{ marginBottom: '8px' }}>
+                          <a
+                            href={item.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-text text-xs"
+                            style={{ textDecoration: 'underline' }}
+                          >
+                            🔗 출처: {item.sourceName || '원문 보기'} <ExternalLink size={10} />
+                          </a>
+                        </div>
+                      )}
 
                       <div className="kanban-card-footer">
                         <button
@@ -410,6 +442,24 @@ export const ProductTracker: React.FC<ProductTrackerProps> = ({
                     value={editingProduct.location}
                     onChange={(e) => setEditingProduct({ ...editingProduct, location: e.target.value })}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label>출처 매체명 및 원문 URL</label>
+                  <div className="form-row">
+                    <input
+                      type="text"
+                      placeholder="매체명 (예: Le Figaro)"
+                      value={editingProduct.sourceName}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, sourceName: e.target.value })}
+                    />
+                    <input
+                      type="text"
+                      placeholder="URL (https://...)"
+                      value={editingProduct.sourceUrl}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, sourceUrl: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
