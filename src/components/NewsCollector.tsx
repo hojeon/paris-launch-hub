@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, ArrowRight, RefreshCw, Zap, Trash2 } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles } from '../utils/rssFetcher';
 import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
@@ -145,24 +145,42 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     setTimeout(() => setRssMessage(null), 3500);
   };
 
-  // 확장 16선 매체 채널 목록
+  // 프랑스 24선 매거진 & 추천 매체 목록
   const mediaList = [
     { name: 'Le Figaro', category: '総合/경제', url: 'https://www.lefigaro.fr' },
     { name: 'Les Échos', category: '경제/테크', url: 'https://www.lesechos.fr' },
-    { name: 'Le Parisien', category: '파리 지역/라이프', url: 'https://www.leparisien.fr' },
+    { name: 'Le Parisien', category: '파리 라이프', url: 'https://www.leparisien.fr' },
     { name: 'BFM Business', category: '비즈니스/산업', url: 'https://www.bfmbusiness.bfmtv.com' },
     { name: 'Maddyness', category: '스타트업/테크', url: 'https://www.maddyness.com' },
     { name: 'FashionNetwork', category: '패션/뷰티 전문', url: 'https://fr.fashionnetwork.com' },
     { name: 'Sortir à Paris', category: '팝업/디저트/문화', url: 'https://www.sortiraparis.com' },
     { name: 'Time Out Paris', category: '트렌디 스팟', url: 'https://www.timeout.fr/paris' },
-    { name: 'Vogue France', category: '럭셔리 패션/뷰티', url: 'https://www.vogue.fr' },
-    { name: 'L\'Officiel Paris', category: '하이패션 & 팝업', url: 'https://www.lofficiel.com' },
-    { name: 'Elle France', category: '뷰티/트렌드/라이프', url: 'https://www.elle.fr' },
+    { name: 'Vogue France', category: '럭셔리 패션 매거진', url: 'https://www.vogue.fr' },
+    { name: 'L\'Officiel Paris', category: '하이패션 매거진', url: 'https://www.lofficiel.com' },
+    { name: 'Elle France', category: '뷰티/패션 매거진', url: 'https://www.elle.fr' },
+    { name: 'GQ France', category: '남성 라이프스타일', url: 'https://www.gqmagazine.fr' },
+    { name: 'Vanity Fair FR', category: '문화/럭셔리', url: 'https://www.vanityfair.fr' },
+    { name: 'Marie Claire FR', category: '뷰티 & 트렌드', url: 'https://www.marieclaire.fr' },
+    { name: 'Harper\'s Bazaar FR', category: '주얼리/하이패션', url: 'https://www.harpersbazaar.fr' },
+    { name: 'Numéro Magazine', category: '예술/디자인 매거진', url: 'https://www.numero.com' },
+    { name: 'AD Magazine FR', category: '인테리어/디자인', url: 'https://www.admagazine.fr' },
+    { name: 'Madame Figaro', category: '라이프/뷰티', url: 'https://madame.lefigaro.fr' },
+    { name: 'Milk Magazine', category: '키즈/라이프 매거진', url: 'https://www.milkmagazine.net' },
     { name: 'LSA Conso', category: '유통/신제품 출시', url: 'https://www.lsa-conso.fr' },
     { name: 'PR Newswire FR', category: '보도자료 배포망', url: 'https://www.prnewswire.com/fr/' },
     { name: 'Business Wire FR', category: '글로벌 런칭 배포', url: 'https://www.businesswire.com' },
     { name: 'Cision France', category: '지사 공식 배포', url: 'https://www.cision.fr' },
-    { name: 'JDN (Journal du Net)', category: '디지털/테크 커머스', url: 'https://www.journaldunet.com' },
+    { name: 'JDN', category: '디지털/테크 커머스', url: 'https://www.journaldunet.com' },
+  ];
+
+  // SNS 해시태그 딥링크 리스트
+  const snsHashtags = [
+    { name: '#lancementproduit', desc: '제품 런칭 공식 태그', insta: 'https://www.instagram.com/explore/tags/lancementproduit/', tiktok: 'https://www.tiktok.com/tag/lancementproduit', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=lancementproduit' },
+    { name: '#nouveauté', desc: '신제품/신상 키워드', insta: 'https://www.instagram.com/explore/tags/nouveaut%C3%A9/', tiktok: 'https://www.tiktok.com/tag/nouveaute', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=nouveaut%C3%A9' },
+    { name: '#popupparis', desc: '파리 팝업스토어 현장', insta: 'https://www.instagram.com/explore/tags/popupparis/', tiktok: 'https://www.tiktok.com/tag/popupparis', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=popupparis' },
+    { name: '#parislaunch', desc: '파리 런칭 속보', insta: 'https://www.instagram.com/explore/tags/parislaunch/', tiktok: 'https://www.tiktok.com/tag/parislaunch', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=parislaunch' },
+    { name: '#ouvertureparis', desc: '파리 매장 신규 오픈', insta: 'https://www.instagram.com/explore/tags/ouvertureparis/', tiktok: 'https://www.tiktok.com/tag/ouvertureparis', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=ouvertureparis' },
+    { name: '#madeinfrance', desc: '메이드 인 프랑스', insta: 'https://www.instagram.com/explore/tags/madeinfrance/', tiktok: 'https://www.tiktok.com/tag/madeinfrance', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=madeinfrance' },
   ];
 
   // 정밀 키워드 프리셋 12종
@@ -243,8 +261,8 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="card-header">
             <div className="icon-wrapper navy"><Rss size={20} /></div>
             <div>
-              <h3>프랑스 파리 추천 매체 & 보도자료 채널 (16선)</h3>
-              <p className="text-muted">패션, 뷰티, 유통, 테크 및 보도자료 배포망 모니터링</p>
+              <h3>프랑스 파리 추천 언론 & 매거진 (24선)</h3>
+              <p className="text-muted">보그, 엘르, GQ, 바자 등 하이엔드 매거진 & 보도자료 채널</p>
             </div>
           </div>
 
@@ -268,8 +286,41 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         </div>
       </div>
 
-      {/* 2. Bottom Section: Live Feed to DB Inbox Import & Live RSS Fetcher */}
-      <div className="card shadow-md margin-top-lg">
+      {/* 2. SNS & Community Hashtag Deep Link Explorer */}
+      <div className="card shadow-md margin-top-lg mb-4">
+        <div className="card-header">
+          <div className="icon-wrapper rose"><Share2 size={20} /></div>
+          <div>
+            <h3>SNS & 커뮤니티 트렌드 탐색기 (Instagram / TikTok / LinkedIn)</h3>
+            <p className="text-muted">인스타그램, 틱톡, LinkedIn의 프랑스어 핵심 해시태그 실시간 원클릭 딥링크 탐색</p>
+          </div>
+        </div>
+
+        <div className="routine-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+          {snsHashtags.map((ht, idx) => (
+            <div key={idx} className="routine-card" style={{ background: '#ffffff', border: '1px solid var(--border-color)' }}>
+              <div className="flex justify-between items-center mb-1">
+                <strong style={{ color: 'var(--accent-gold)', fontSize: '1rem' }}>{ht.name}</strong>
+                <span className="text-muted" style={{ fontSize: '0.75rem' }}>{ht.desc}</span>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <a href={ht.insta} target="_blank" rel="noreferrer" className="btn-outline btn-xs flex items-center gap-1" title="인스타그램 탐색">
+                  <Instagram size={12} color="#e1306c" /> Instagram
+                </a>
+                <a href={ht.tiktok} target="_blank" rel="noreferrer" className="btn-outline btn-xs flex items-center gap-1" title="틱톡 탐색">
+                  <Video size={12} color="#00f2fe" /> TikTok
+                </a>
+                <a href={ht.linkedin} target="_blank" rel="noreferrer" className="btn-outline btn-xs flex items-center gap-1" title="LinkedIn 탐색">
+                  <Linkedin size={12} color="#0a66c2" /> LinkedIn
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 3. Bottom Section: Live Feed to DB Inbox Import & Live RSS Fetcher */}
+      <div className="card shadow-md">
         <div className="card-header space-between" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div className="header-with-badge">
             <div className="icon-wrapper rose"><Bookmark size={20} /></div>
