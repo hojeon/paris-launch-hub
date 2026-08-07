@@ -5,6 +5,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     id: 'rss-lefigaro-eco',
     name: 'Le Figaro Économie',
     url: 'https://www.lefigaro.fr/rss/figaro_economie.xml',
+    siteUrl: 'https://www.lefigaro.fr/economie',
     category: '테크',
     description: '프랑스 주요 경제, 테크, 비즈니스 신제품 보도자료',
     isPreset: true,
@@ -13,6 +14,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     id: 'rss-fashionnetwork',
     name: 'FashionNetwork France',
     url: 'https://fr.fashionnetwork.com/rss/news',
+    siteUrl: 'https://fr.fashionnetwork.com/news/',
     category: '패션',
     description: '파리 패션위크, 명품 브랜딩, 뷰티/의류 런칭 뉴스',
     isPreset: true,
@@ -21,6 +23,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     id: 'rss-sortiraparis',
     name: 'Sortir à Paris',
     url: 'https://www.sortiraparis.com/rss',
+    siteUrl: 'https://www.sortiraparis.com/',
     category: '식품',
     description: '파리 현지 팝업스토어, 미식 디저트, 트렌디 스팟',
     isPreset: true,
@@ -29,6 +32,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     id: 'rss-lesechos',
     name: 'Les Échos',
     url: 'https://www.lesechos.fr/rss/rss_lesechos_une.xml',
+    siteUrl: 'https://www.lesechos.fr/',
     category: '라이프스타일',
     description: '프랑스 프리미엄 소비재 및 스타트업 라이프스타일',
     isPreset: true,
@@ -52,13 +56,14 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
           const rawSnippet = item.description || item.content || '';
           // Strip HTML tags for clean snippet text
           const snippet = rawSnippet.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
+          const articleUrl = sanitizeArticleUrl(item.link || item.guid, feed);
           
           return {
             id: `rss-${Date.now()}-${idx}`,
             title,
             source: feed.name,
             publishedAt: item.pubDate ? item.pubDate.split(' ')[0] : new Date().toISOString().split('T')[0],
-            url: item.link || feed.url,
+            url: articleUrl,
             snippet: snippet || title,
             category: feed.category,
             suggestedBrand: extractBrandFromTitle(title) || feed.name,
@@ -78,6 +83,13 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
   return generateFallbackRssArticles(feed);
 }
 
+function sanitizeArticleUrl(url: string | undefined, feed: RssFeedSource): string {
+  if (!url || url.endsWith('.xml') || url.includes('/rss')) {
+    return (feed as any).siteUrl || feed.url.replace(/\/rss.*$/, '').replace(/\.xml$/, '');
+  }
+  return url;
+}
+
 function extractBrandFromTitle(title: string): string {
   const words = title.split(' ');
   if (words.length > 0 && words[0].length > 2) {
@@ -88,13 +100,15 @@ function extractBrandFromTitle(title: string): string {
 
 function generateFallbackRssArticles(feed: RssFeedSource): NewsArticle[] {
   const today = new Date().toISOString().split('T')[0];
+  const targetSiteUrl = (feed as any).siteUrl || 'https://www.lefigaro.fr/economie';
+
   return [
     {
       id: `rss-fb-${Date.now()}-1`,
-      title: `[${feed.name} RSS] 파리 독점 출시 신제품 팝업 스토어 오픈`,
+      title: `[${feed.name}] 파리 독점 출시 신제품 팝업 스토어 오픈`,
       source: feed.name,
       publishedAt: today,
-      url: feed.url,
+      url: targetSiteUrl,
       snippet: `프랑스 파리 중심가에서 선보이는 ${feed.category} 카테고리의 한정판 신제품 출시 소식입니다.`,
       category: feed.category,
       suggestedBrand: 'Paris Exclusive',
@@ -105,10 +119,10 @@ function generateFallbackRssArticles(feed: RssFeedSource): NewsArticle[] {
     },
     {
       id: `rss-fb-${Date.now()}-2`,
-      title: `[${feed.name} RSS] 2026 파리 시즌 신제품 공식 프리뷰`,
+      title: `[${feed.name}] 2026 파리 시즌 신제품 공식 프리뷰`,
       source: feed.name,
       publishedAt: today,
-      url: feed.url,
+      url: targetSiteUrl,
       snippet: `현지 언론이 주목하는 새로운 파리 런칭 컬렉션의 핵심 사양 및 가격 정보 브리핑.`,
       category: feed.category,
       suggestedBrand: 'Maison de Paris',
