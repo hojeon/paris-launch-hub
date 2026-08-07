@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TelegramConfig } from '../types';
-import { getTelegramConfig, saveTelegramConfig, testTelegramConnection, VALID_DEFAULT_BOT_TOKEN, VALID_DEFAULT_CHAT_ID } from '../utils/telegramService';
+import { getTelegramConfig, saveTelegramConfig, testTelegramConnection, DEFAULT_BOT_TOKEN, DEFAULT_CHAT_ID } from '../utils/telegramService';
 import { Send, X, CheckCircle, AlertCircle, Info, ExternalLink, Zap, Eye, EyeOff } from 'lucide-react';
 
 interface TelegramSettingsModalProps {
@@ -15,25 +15,18 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
   onConfigSaved,
 }) => {
   const [config, setConfig] = useState<TelegramConfig>({
-    botToken: VALID_DEFAULT_BOT_TOKEN,
-    chatId: VALID_DEFAULT_CHAT_ID,
+    botToken: DEFAULT_BOT_TOKEN,
+    chatId: DEFAULT_CHAT_ID,
     enabled: true,
   });
 
-  const [showToken, setShowToken] = useState<boolean>(true);
+  const [showToken, setShowToken] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState<boolean>(false);
 
   useEffect(() => {
     if (isOpen) {
       const current = getTelegramConfig();
-      // 마스킹 점이 섞인 토큰은 유효 토큰으로 정제
-      if (!current.botToken || current.botToken.includes('•') || !current.botToken.includes(':')) {
-        current.botToken = VALID_DEFAULT_BOT_TOKEN;
-      }
-      if (!current.chatId || current.chatId.includes('•')) {
-        current.chatId = VALID_DEFAULT_CHAT_ID;
-      }
       setConfig(current);
       setTestResult(null);
     }

@@ -2,12 +2,12 @@ import { TelegramConfig, ProductItem } from '../types';
 
 const STORAGE_KEY = 'paris_telegram_config';
 
-export const VALID_DEFAULT_BOT_TOKEN = '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E';
-export const VALID_DEFAULT_CHAT_ID = '7875527137';
+export const DEFAULT_BOT_TOKEN = '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E';
+export const DEFAULT_CHAT_ID = '7875527137';
 
 const DEFAULT_CONFIG: TelegramConfig = {
-  botToken: VALID_DEFAULT_BOT_TOKEN,
-  chatId: VALID_DEFAULT_CHAT_ID,
+  botToken: DEFAULT_BOT_TOKEN,
+  chatId: DEFAULT_CHAT_ID,
   enabled: true,
 };
 
@@ -16,14 +16,7 @@ export function getTelegramConfig(): TelegramConfig {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      // 토큰에 마스킹 점(•)이 섞여있거나 무효한 경우 자동 정제
-      if (parsed.botToken && !parsed.botToken.includes('•') && parsed.botToken.includes(':')) {
-        return {
-          botToken: parsed.botToken.trim(),
-          chatId: (parsed.chatId || VALID_DEFAULT_CHAT_ID).trim(),
-          enabled: parsed.enabled ?? true,
-        };
-      }
+      if (parsed.botToken && parsed.chatId) return parsed;
     } catch (e) {
       console.error('Failed to parse saved telegram config:', e);
     }
@@ -36,21 +29,16 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Robust Multi-Relay Telegram Dispatcher
+ * Universal Multi-Channel Telegram Dispatcher
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
-  // 사용자가 마스킹된 점을 제출한 경우 기본 유효 토큰으로 강제 치환
-  const actualToken = (!cleanToken || cleanToken.includes('•') || !cleanToken.includes(':'))
-    ? VALID_DEFAULT_BOT_TOKEN
-    : cleanToken;
-  const actualChatId = (!cleanChatId || cleanChatId.includes('•'))
-    ? VALID_DEFAULT_CHAT_ID
-    : cleanChatId;
+  const token = (cleanToken || DEFAULT_BOT_TOKEN).trim();
+  const chat = (cleanChatId || DEFAULT_CHAT_ID).trim();
 
   const encodedText = encodeURIComponent(text);
-  const targetGetUrl = `https://api.telegram.org/bot${actualToken}/sendMessage?chat_id=${actualChatId}&text=${encodedText}`;
+  const targetGetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
 
-  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 3500): Promise<Response> => {
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 4000): Promise<Response> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -63,7 +51,31 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     }
   };
 
-  // Relay 1: AllOrigins Proxy
+  // 1차: Cloudflare Serverless Function (/api/telegram)
+  try {
+    const res = await fetchWithTimeout('/api/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        botToken: token,
+        chatId: chat,
+        text: text,
+      }),
+    }, 4500);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.ok === true) {
+        return { ok: true, data };
+      } else if (data && data.description) {
+        return { ok: false, data };
+      }
+    }
+  } catch (e) {
+    console.warn('Serverless Endpoint (/api/telegram) failed, trying CORS proxies...', e);
+  }
+
+  // 2차: AllOrigins Proxy Relay
   try {
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
     const res = await fetchWithTimeout(proxyUrl, {}, 3500);
@@ -76,10 +88,10 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Relay 1 (AllOrigins) failed:', e);
+    console.warn('Proxy Relay 1 (AllOrigins) failed:', e);
   }
 
-  // Relay 2: Corsproxy.io
+  // 3차: Corsproxy.io Relay
   try {
     const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetGetUrl)}`;
     const res = await fetchWithTimeout(proxyUrl, {}, 3500);
@@ -92,16 +104,16 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Relay 2 (Corsproxy) failed:', e);
+    console.warn('Proxy Relay 2 (Corsproxy) failed:', e);
   }
 
-  // Relay 3: Direct POST
+  // 4차: Direct POST
   try {
-    const res = await fetchWithTimeout(`https://api.telegram.org/bot${actualToken}/sendMessage`, {
+    const res = await fetchWithTimeout(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: actualChatId,
+        chat_id: chat,
         text: text,
       }),
     }, 3500);
@@ -115,14 +127,14 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     console.warn('Direct POST failed:', e);
   }
 
-  return { ok: false, error: '텔레그램 네트워크 504 타임아웃' };
+  return { ok: false, error: '텔레그램 API 타임아웃 (네트워크 연결 지연)' };
 }
 
 /**
  * Tests Telegram bot connection
  */
 export async function testTelegramConnection(botToken: string, chatId: string): Promise<{ success: boolean; message: string }> {
-  const text = `🇫🇷 [PARIS LAUNCH HUB] 텔레그램 연동 성공!\n\n모바일 알림 및 신제품 컨펌 승인 파이프라인이 연결되었습니다.`;
+  const text = `🇫🇷 [PARIS LAUNCH HUB] 텔레그램 연동 성공!\n\n모바일 알림 및 신제품 컨펌 승인 파이프라인이 정상적으로 연결되었습니다.`;
   const res = await callTelegramApi(botToken, chatId, text);
 
   if (res.ok && res.data?.ok === true) {
