@@ -29,40 +29,63 @@ export default {
         const text = body.text || '테스트 메세지';
 
         const encodedText = encodeURIComponent(text);
-        const targetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
+        const targetGetUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${encodedText}`;
 
-        // Attempt 1: Server Direct POST to Telegram
+        // Strategy 1: Server-side CORS Proxy (corsproxy.io)
         try {
-          const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          const proxyUrl1 = `https://corsproxy.io/?${encodeURIComponent(targetGetUrl)}`;
+          const res1 = await fetch(proxyUrl1);
+          if (res1.ok) {
+            const data1 = await res1.json();
+            if (data1 && data1.ok) {
+              return new Response(JSON.stringify(data1), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Strategy 1 failed:', e);
+        }
+
+        // Strategy 2: Server-side Relay (allorigins.win)
+        try {
+          const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetGetUrl)}`;
+          const res2 = await fetch(proxyUrl2);
+          if (res2.ok) {
+            const data2 = await res2.json();
+            if (data2 && data2.ok) {
+              return new Response(JSON.stringify(data2), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Strategy 2 failed:', e);
+        }
+
+        // Strategy 3: Server Direct POST to Telegram
+        try {
+          const res3 = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: chat, text: text }),
           });
-          const data = await tgRes.json();
-          if (data && data.ok) {
-            return new Response(JSON.stringify(data), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-            });
+          if (res3.ok) {
+            const data3 = await res3.json();
+            if (data3 && data3.ok) {
+              return new Response(JSON.stringify(data3), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+              });
+            }
           }
         } catch (e) {
-          console.warn('Server Direct POST failed:', e);
+          console.warn('Strategy 3 failed:', e);
         }
 
-        // Attempt 2: Server-side GET via Relay
-        try {
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-          const pRes = await fetch(proxyUrl);
-          const pData = await pRes.json();
-          return new Response(JSON.stringify(pData), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-          });
-        } catch (e) {
-          console.warn('Server GET Relay failed:', e);
-        }
-
-        return new Response(JSON.stringify({ ok: false, description: 'Telegram API Server Timeout (Cloudflare Edge)' }), {
+        return new Response(JSON.stringify({ ok: false, description: 'Telegram API Matrix All Relays Failed' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         });
