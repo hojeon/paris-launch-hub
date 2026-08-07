@@ -7,8 +7,8 @@ export async function onRequestPost(context: EventContext): Promise<Response> {
     const body = await context.request.json() as { botToken?: string; chatId?: string; text?: string };
     const { botToken, chatId, text } = body;
 
-    const token = botToken || '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E';
-    const chat = chatId || '7875527137';
+    const token = (botToken || '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E').trim();
+    const chat = (chatId || '7875527137').trim();
 
     if (!token || !chat || !text) {
       return new Response(JSON.stringify({ ok: false, error: 'Missing required parameters' }), {
@@ -24,7 +24,6 @@ export async function onRequestPost(context: EventContext): Promise<Response> {
       body: JSON.stringify({
         chat_id: chat,
         text: text,
-        parse_mode: 'HTML',
       }),
     });
 
