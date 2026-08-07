@@ -15,9 +15,9 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
   onConfigSaved,
 }) => {
   const [config, setConfig] = useState<TelegramConfig>({
-    botToken: '',
-    chatId: '',
-    enabled: false,
+    botToken: '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E',
+    chatId: '7875527137',
+    enabled: true,
   });
 
   const [showToken, setShowToken] = useState<boolean>(true);
@@ -48,14 +48,6 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
     setTestResult(result);
   };
 
-  const getDirectTelegramUrl = () => {
-    const token = config.botToken.trim();
-    const chat = config.chatId.trim();
-    if (!token || !chat) return '';
-    const msg = encodeURIComponent('🇫🇷 [PARIS LAUNCH HUB] 1-Click 직통 연동 테스트 성공!');
-    return `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&text=${msg}`;
-  };
-
   return (
     <div className="modal-backdrop">
       <div className="modal-content card shadow-lg" style={{ maxWidth: '580px' }}>
@@ -79,19 +71,10 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
           <div className="alert-box info mb-4">
             <Info size={18} />
             <div>
-              <strong>텔레그램 봇 만들기 안내</strong>
+              <strong>텔레그램 봇 설정 완료 (@빠꼼데 봇)</strong>
               <p style={{ fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                1. Telegram에서 <code>@BotFather</code> 검색 후 <code>/newbot</code>을 입력하여 봇 토큰 생성<br />
-                2. 생성된 봇에게 대화를 시작한 후 <code>@userinfobot</code> 등을 통해 내 Chat ID 확인<br />
-                <a 
-                  href="https://t.me/BotFather" 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="flex items-center gap-1 text-gold hover:underline"
-                  style={{ display: 'inline-flex', marginTop: '4px' }}
-                >
-                  BotFather 바로가기 <ExternalLink size={12} />
-                </a>
+                봇 토큰과 챗 ID(<code>7875527137</code>)가 사전 세팅되었습니다.<br />
+                텔레그램 앱에서 <code>@pcds75bot</code> 봇에게 <strong>/start</strong>를 1회 보내두시면 즉시 수신 가능합니다.
               </p>
             </div>
           </div>
@@ -115,7 +98,7 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
                 type="button" 
                 className="btn-text" 
                 onClick={() => setShowToken(!showToken)}
-                style={{ fontSize: '0.75rem', display: 'flex', itemsCenter: 'center', gap: '4px' }}
+                style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
                 <span>{showToken ? '숨기기' : '보기'}</span>
@@ -123,7 +106,7 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
             </div>
             <input
               type={showToken ? 'text' : 'password'}
-              placeholder="예: 7875527137:AAEXXXXXXXX..."
+              placeholder="8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E"
               value={config.botToken}
               onChange={(e) => setConfig({ ...config, botToken: e.target.value })}
               className="input-field"
@@ -135,39 +118,12 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
             <label>텔레그램 챗 ID (Chat ID)</label>
             <input
               type="text"
-              placeholder="예: 7875527137"
+              placeholder="7875527137"
               value={config.chatId}
               onChange={(e) => setConfig({ ...config, chatId: e.target.value })}
               className="input-field"
               style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
             />
-          </div>
-
-          {/* Direct Link Banner Always Visible when values entered */}
-          <div className="alert-box mb-4" style={{ background: 'rgba(217, 119, 6, 0.08)', border: '1px solid var(--border-gold)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div className="flex justify-between items-center" style={{ flexWrap: 'wrap', gap: '6px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-gold)' }}>
-                ⚡ 1초 직통 테스트 딥링크 (CORS 방화벽 100% 우회):
-              </span>
-              {getDirectTelegramUrl() ? (
-                <a
-                  href={getDirectTelegramUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary btn-xs flex items-center gap-1"
-                  style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #d97706, #b45309)' }}
-                >
-                  <Zap size={12} />
-                  <span>직통 메세지 전송 탭 열기</span>
-                  <ExternalLink size={12} />
-                </a>
-              ) : (
-                <span className="text-muted" style={{ fontSize: '0.75rem' }}>봇 토큰과 챗 ID를 입력하면 활성화됩니다</span>
-              )}
-            </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              위 버튼을 누르시면 브라우저가 직접 텔레그램 메세지를 전송하며 스마트폰 텔레그램 앱에 띵동! 수신됩니다.
-            </span>
           </div>
 
           {/* Test Status Result */}
@@ -182,12 +138,12 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
         <div className="modal-footer flex justify-between items-center" style={{ flexWrap: 'wrap', gap: '8px' }}>
           <button 
             type="button" 
-            className="btn-secondary flex items-center gap-2"
+            className="btn-primary flex items-center gap-2"
             onClick={handleTestConnection}
-            disabled={isTesting || !config.botToken || !config.chatId}
+            disabled={isTesting}
           >
-            <Send size={16} />
-            <span>{isTesting ? '발송 중...' : '자동 테스트 전송'}</span>
+            <Zap size={16} />
+            <span>{isTesting ? '우회 서버 발송 중...' : '⚡ 텔레그램 테스트 메시지 즉시 전송'}</span>
           </button>
 
           <div className="flex gap-2">
