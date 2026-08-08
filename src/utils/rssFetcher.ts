@@ -3,17 +3,17 @@ import { NewsArticle, RssFeedSource } from '../types';
 export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   {
     id: 'rss-fashionnetwork-fr',
-    name: 'FashionNetwork France (패션/뷰티 런칭)',
+    name: 'FashionNetwork France (신제품/팝업 특화)',
     url: 'https://fr.fashionnetwork.com/rss/feed/fr,0.xml',
     siteUrl: 'https://fr.fashionnetwork.com/news/',
     category: '패션',
-    description: '파리 패션위크, 명품 브랜딩, 뷰티/의류 런칭 실시간 RSS',
+    description: '파리 패션위크, 뷰티/의류 신제품 & 팝업스토어 런칭 전용 피드',
     isPreset: true,
   },
   {
     id: 'rss-google-news-indie-paris',
     name: 'Google News Paris Indie & Niche (파리 소규모 인디 브랜드 🎨)',
-    url: 'https://news.google.com/rss/search?q=%28%22Paris%22+OR+%22Marais%22%29+AND+%28%22indie+brand%22+OR+%22emerging+designer%22+OR+%22niche+beauty%22+OR+%22marque+ind%C3%A9pendante%22+OR+%22jeune+cr%C3%A9ateur%22+OR+%22artisan%22+OR+%22boutique+%C3%A9ph%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
+    url: 'https://news.google.com/rss/search?q=%28%22Paris%22+OR+%22Marais%22%29+AND+%28%22indie+brand%22+OR+%22niche+beauty%22+OR+%22marque+ind%C3%A9pendante%22+OR+%22jeune+cr%C3%A9ateur%22+OR+%22boutique+%C3%A9ph%C3%A8re%22%29+AND+%28produit+OR+collection+OR+nouveau%29+-racheter+-fiscal&hl=fr&gl=FR&ceid=FR:fr',
     siteUrl: 'https://news.google.com',
     category: '패션',
     description: '파리 소규모 인디 브랜드, 신진 크리에이터, 니치 뷰티 & 팝업스토어 특화 수집',
@@ -21,25 +21,25 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
   {
     id: 'rss-google-news-paris-bool-fr',
-    name: 'Google News Paris Live (프랑스어 3중 정밀 검색식 🇫🇷)',
-    url: 'https://news.google.com/rss/search?q=%28%22lancement%22+OR+%22nouveaut%C3%A9%22+OR+%22disponible%22+OR+%22exclusivit%C3%A9%22+OR+%22boutique+%C3%A9ph%C3%A8re%22+OR+%22pop-up%22%29+AND+%28%22Paris%22+OR+%22France%22%29+AND+%28produit+OR+collection+OR+ouverture+OR+flagship+OR+%22avant-premi%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
+    name: 'Google News Paris Live (구매대행 신제품 정밀 검색식 🇫🇷)',
+    url: 'https://news.google.com/rss/search?q=%28%22lancement%22+OR+%22nouveaut%C3%A9%22+OR+%22disponible%22+OR+%22boutique+%C3%A9ph%C3%A8re%22+OR+%22pop-up%22%29+AND+%28%22Paris%22+OR+%22France%22%29+AND+%28produit+OR+collection+OR+flacon+OR+sac%29+-redressement+-pourparlers+-racheter+-chiffre&hl=fr&gl=FR&ceid=FR:fr',
     siteUrl: 'https://news.google.com',
     category: '패션',
-    description: '프랑스 전 언론사 실시간 파리 런칭/신제품/팝업 속보 3중 검색식 자동 수집',
+    description: '프랑스 전 언론사 실시간 파리 구매대행 신제품/팝업 속보 3중 정밀 검색식',
     isPreset: true,
   },
   {
     id: 'rss-google-news-paris-bool-en',
-    name: 'Google News Paris Launch (영어 최상급 3중 검색식 🇬🇧)',
-    url: 'https://news.google.com/rss/search?q=%28%22Paris%22+OR+%22French%22%29+AND+%28%22new+collection%22+OR+%22product+launch%22+OR+%22flagship+store%22+OR+%22pop-up+store%22+OR+%22exclusive+release%22+OR+%22capsule+collection%22%29+AND+%28fashion+OR+beauty+OR+luxury+OR+footwear+OR+jewelry%29&hl=en-US&gl=US&ceid=US:en',
+    name: 'Google News Paris Launch (영어 최상급 신제품 검색식 🇬🇧)',
+    url: 'https://news.google.com/rss/search?q=%28%22Paris%22+OR+%22French%22%29+AND+%28%22new+collection%22+OR+%22product+launch%22+OR+%22pop-up+store%22+OR+%22exclusive+release%22%29+AND+%28fashion+OR+beauty+OR+perfume+OR+handbag%29+-tax+-lawsuit+-acquisition&hl=en-US&gl=US&ceid=US:en',
     siteUrl: 'https://news.google.com',
     category: '패션',
-    description: '글로벌 영문 언론사 실시간 파리 런칭/신제품/팝업 3중 영문 검색식 수집',
+    description: '글로벌 영문 언론사 실시간 파리 신제품/팝업/한정판 3중 영문 검색식 수집',
     isPreset: true,
   },
   {
     id: 'rss-lefigaro-eco',
-    name: 'Le Figaro Économie (테크/비즈니스 신제품)',
+    name: 'Le Figaro Économie (테크/컨슈머 신제품)',
     url: 'https://www.lefigaro.fr/rss/figaro_economie.xml',
     siteUrl: 'https://www.lefigaro.fr/economie',
     category: '테크',
@@ -67,25 +67,53 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
 ];
 
 /**
+ * B2B / M&A / Corporate Tax / Financial News Rejection Classifier
+ * Rejects articles about M&A, tax audits, law suits, and executive changes.
+ */
+export function isB2bOrCorporateNews(title: string, description: string = ''): boolean {
+  const combined = (title + ' ' + description).toLowerCase();
+
+  // B2B Non-Product Keywords (Tax audits, M&A, Lawsuits, Share acquisition, Earnings)
+  const b2bKeywords = [
+    'redressement fiscal', // 세무조사/추징금 (e.g. Lacoste)
+    'racheter', 'rachat', 'pourparlers', 'acquisition', 'fusion', // M&A / 지분 인수 (e.g. Aroma-Zone)
+    'société d\'investissement', 'fonds d\'investissement', 'investisseur', // 사모펀드 / 투자사
+    'chiffre d\'affaires', 'résultats financiers', 'actionnaire', // 매출 / 실적 / 주주
+    'nomination', 'démission', 'p-dg', 'ceo', 'directeur général', // 인사 이동 / 사임
+    'tribunal', 'procès', 'justice', 'plainte', 'tribunal de commerce', // 재판 / 법원 / 고소
+    'licenciement', 'plan social', 'faillite', 'liquidation', // 해고 / 파산
+    'indemnité carburant', 'décret', 'assemblée nationale', // 정부 보조금 / 법안
+  ];
+
+  return b2bKeywords.some(kw => combined.includes(kw));
+}
+
+/**
  * Contextual Productness Evaluation Engine
+ * Strictly verifies whether an article is about a physical consumer product/launch.
  */
 export function calculateProductnessScore(title: string, description: string = ''): number {
+  // 🚫 Reject B2B / M&A / Tax Audit / Financial News Immediately!
+  if (isB2bOrCorporateNews(title, description)) {
+    return -100;
+  }
+
   let score = 0;
   const combined = (title + ' ' + description).toLowerCase();
 
-  // 1. Commercial Product / Collection Signals (+30)
-  if (combined.includes('collection') || combined.includes('nouveauté') || combined.includes('produit') || combined.includes('lancement') || combined.includes('launch') || combined.includes('new product')) {
-    score += 30;
+  // 1. Commercial Product / Collection Signals (+40)
+  if (combined.includes('collection') || combined.includes('nouveauté') || combined.includes('produit') || combined.includes('lancement') || combined.includes('launch') || combined.includes('new product') || combined.includes('capsule')) {
+    score += 40;
   }
 
-  // 2. Retail Store / Pop-up Signals (+30)
-  if (combined.includes('pop-up') || combined.includes('popup') || combined.includes('boutique') || combined.includes('store') || combined.includes('éphémère') || combined.includes('flagship')) {
-    score += 30;
+  // 2. Retail Store / Pop-up / Flagship Opening Signals (+35)
+  if (combined.includes('pop-up') || combined.includes('popup') || combined.includes('boutique') || combined.includes('store') || combined.includes('éphémère') || combined.includes('flagship') || combined.includes('ouvre')) {
+    score += 35;
   }
 
-  // 3. Price / Shopping Signals (+20)
-  if (/\d+\s*(€|eur|\$|usd|£)/i.test(combined) || combined.includes('prix') || combined.includes('disponible') || combined.includes('euro')) {
-    score += 20;
+  // 3. Price / Shopping / Goods Signals (+25)
+  if (/\d+\s*(€|eur|\$|usd|£)/i.test(combined) || combined.includes('prix') || combined.includes('disponible') || combined.includes('flacon') || combined.includes('sac') || combined.includes('chaussures')) {
+    score += 25;
   }
 
   // 4. Fashion / Beauty / Lifestyle / Gourmet Domain Signals (+20)
@@ -93,18 +121,11 @@ export function calculateProductnessScore(title: string, description: string = '
     score += 20;
   }
 
-  // 5. Negative Non-Commercial Context Multiplier
-  if (combined.includes('déplacement') || combined.includes('gouvernement') || combined.includes('décret') || combined.includes('carburant') || combined.includes('indemnité')) {
-    if (!combined.includes('marque') && !combined.includes('collection') && !combined.includes('boutique') && !combined.includes('flacon')) {
-      score -= 50;
-    }
-  }
-
   return score;
 }
 
 /**
- * Genuine Live XML RSS/Atom Fetcher Engine with Exact Direct Article URL Extraction
+ * Genuine Live XML RSS/Atom Fetcher Engine with B2B M&A Elimination
  */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
   console.log(`[RSS Engine] Live fetch for: ${feed.name} (${feed.url})`);
@@ -123,7 +144,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         try {
           const parsedJson = JSON.parse(text);
           if (parsedJson.items && Array.isArray(parsedJson.items)) {
-            return parsedJson.items.filter((i: any) => calculateProductnessScore(i.title || '', i.snippet || '') >= 15);
+            return parsedJson.items.filter((i: any) => calculateProductnessScore(i.title || '', i.snippet || '') >= 30);
           }
         } catch (e) {}
       }
@@ -138,7 +159,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           return data
-            .filter((item: any) => calculateProductnessScore(item.title || '', item.snippet || '') >= 15)
+            .filter((item: any) => calculateProductnessScore(item.title || '', item.snippet || '') >= 30)
             .map((item: any, idx: number) => ({
               ...item,
               id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
@@ -209,7 +230,7 @@ export async function fetchSingleSiteFullRss(feedUrl: string = 'https://fr.fashi
 }
 
 /**
- * Genuine XML Parser with Exact Individual Article Link Extractor
+ * Genuine XML Parser with Strict Commercial Product Filtering
  */
 function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>): NewsArticle[] {
   const articles: NewsArticle[] = [];
@@ -233,7 +254,7 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
       return parseXmlWithRegexFallback(xmlString, feed);
     }
 
-    nodes.slice(0, 25).forEach((node, idx) => {
+    nodes.slice(0, 30).forEach((node, idx) => {
       // 1. Extract Title
       const titleNode = node.querySelector('title');
       let title = titleNode ? (titleNode.textContent || '').trim() : '';
@@ -246,10 +267,14 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
       let description = descNode ? (descNode.textContent || '').trim() : '';
       description = stripHtmlTags(description);
 
+      // 🚫 Strict Commercial Product Threshold (Min 30 Points & Must NOT be B2B M&A/Tax Audit)
       const pScore = calculateProductnessScore(title, description);
-      if (pScore < 15) return;
+      if (pScore < 30) {
+        console.warn(`[Non-Product / B2B Dropped] (${pScore} pts): ${title}`);
+        return;
+      }
 
-      // 3. 🔗 EXACT DIRECT ARTICLE LINK EXTRACTION (Priority 1)
+      // 3. EXACT DIRECT ARTICLE LINK EXTRACTION
       let articleDirectUrl = '';
       const linkNode = node.querySelector('link');
       if (linkNode) {
@@ -262,7 +287,6 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
           articleDirectUrl = guidText;
         }
       }
-      // If direct link still missing, search via Google direct article query
       if (!articleDirectUrl || !articleDirectUrl.startsWith('http')) {
         articleDirectUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' ' + (feed.name || ''))}`;
       }
@@ -316,7 +340,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
   const articles: NewsArticle[] = [];
   const itemMatches = xmlString.match(/<(item|entry)[\s\S]*?<\/(item|entry)>/gi) || [];
 
-  itemMatches.slice(0, 25).forEach((itemXml, idx) => {
+  itemMatches.slice(0, 30).forEach((itemXml, idx) => {
     const titleMatch = itemXml.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
     const linkMatch = itemXml.match(/<link[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i) || itemXml.match(/href=["'](https?:\/\/[^"']+)["']/i);
     const descMatch = itemXml.match(/<(description|summary|content)[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(description|summary|content)>/i);
@@ -327,7 +351,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
 
     const desc = descMatch ? stripHtmlTags(descMatch[2] || descMatch[1]).trim() : '';
 
-    if (calculateProductnessScore(title, desc) < 15) return;
+    if (calculateProductnessScore(title, desc) < 30) return;
 
     let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : '';
     link = stripHtmlTags(link);
