@@ -11,21 +11,33 @@ import { AddProductModal } from './components/AddProductModal';
 import { TelegramSettingsModal } from './components/TelegramSettingsModal';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('tracker');
+  const [activeTab, setActiveTab] = useState<string>('collector');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState<boolean>(false);
 
   const [telegramConfig, setTelegramConfig] = useState<TelegramConfig>(() => getTelegramConfig());
 
-  // LocalStorage State Initialization
+  // LocalStorage State Initialization with Fallback Guarantee
   const [products, setProducts] = useState<ProductItem[]>(() => {
     const saved = localStorage.getItem('paris_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_PRODUCTS;
   });
 
   const [newsList, setNewsList] = useState<NewsArticle[]>(() => {
     const saved = localStorage.getItem('paris_news');
-    return saved ? JSON.parse(saved) : INITIAL_NEWS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_NEWS;
   });
 
   const [selectedProductForContent, setSelectedProductForContent] = useState<ProductItem | null>(null);
@@ -57,7 +69,7 @@ export const App: React.FC = () => {
 
   const handleClearNewsList = () => {
     if (confirm('수집 대기 목록을 모두 비우시겠습니까?')) {
-      setNewsList([]);
+      setNewsList(INITIAL_NEWS);
     }
   };
 
