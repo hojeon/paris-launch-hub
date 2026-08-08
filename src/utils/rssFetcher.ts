@@ -2,7 +2,7 @@ import { NewsArticle, RssFeedSource } from '../types';
 
 export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   {
-    id: 'rss-fashionnetwork-real',
+    id: 'rss-fashionnetwork-fr',
     name: 'FashionNetwork France (실시간)',
     url: 'https://fr.fashionnetwork.com/rss/feed/fr,0.xml',
     siteUrl: 'https://fr.fashionnetwork.com/news/',
@@ -21,7 +21,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
   {
     id: 'rss-google-news-paris',
-    name: 'Google News Paris Launch Live',
+    name: 'Google News France Paris Launch',
     url: 'https://news.google.com/rss/search?q=lancement+produit+Paris+OR+nouveaut%C3%A9+Paris&hl=fr&gl=FR&ceid=FR:fr',
     siteUrl: 'https://news.google.com',
     category: '패션',
@@ -48,216 +48,253 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
 ];
 
-const BACKUP_PARIS_ARTICLES: NewsArticle[] = [
-  {
-    id: 'backup-fn-1',
-    title: 'Lacoste visé par un redressement fiscal de près de 10 millions d\'euros',
-    source: 'FashionNetwork France',
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: 'https://fr.fashionnetwork.com/news/Lacoste-vise-par-un-redressement-fiscal-de-pres-de-10-millions-d-euros,1858362.html',
-    snippet: 'L\'entreprise Lacoste a récemment été visée par un redressement fiscal de 9,9 millions d\'euros à Paris.',
-    category: '패션',
-    suggestedBrand: 'Lacoste',
-    suggestedProduct: 'Nouvelle Collection Lacoste Paris',
-    suggestedLocation: '파리 샹젤리제 플래그십',
-    suggestedPrice: '150€ - 450€',
-    isParsed: false,
-  },
-  {
-    id: 'backup-fn-2',
-    title: 'Tommy Hilfiger fait appel à Romeo Beckham pour sa campagne denim automne 2026 à Paris',
-    source: 'FashionNetwork France',
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: 'https://fr.fashionnetwork.com/news/Tommy-hilfiger-fait-appel-a-romeo-beckham-pour-sa-campagne-denim-automne-2026,1857740.html',
-    snippet: 'La marque américaine Tommy Hilfiger dévoile sa nouvelle ligne de denim automne 2026 à Paris.',
-    category: '패션',
-    suggestedBrand: 'Tommy Hilfiger',
-    suggestedProduct: 'Ligne Denim Automne 2026',
-    suggestedLocation: '파리 샹젤리제 매장',
-    suggestedPrice: '120€ - 280€',
-    isParsed: false,
-  },
-  {
-    id: 'backup-fn-3',
-    title: 'Jacquemus ouvre une boutique éphémère exclusive au cœur du Marais à Paris',
-    source: 'FashionNetwork France',
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: 'https://fr.fashionnetwork.com/news/',
-    snippet: 'Le créateur Simon Porte Jacquemus dévoile son nouveau concept-store éphémère et sa collection exclusive à Paris.',
-    category: '패션',
-    suggestedBrand: 'Jacquemus',
-    suggestedProduct: 'Boutique Éphémère Collection Le Marais',
-    suggestedLocation: '파리 마레 지구 (Le Marais)',
-    suggestedPrice: '120€ - 850€',
-    isParsed: false,
-  },
-  {
-    id: 'backup-fn-4',
-    title: 'Dior Beauté lance sa nouvelle gamme exclusive de soins à la Rose de Granville à Paris',
-    source: 'Vogue France',
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: 'https://www.vogue.fr/beaute',
-    snippet: 'Maison Dior présente en avant-première parisienne son sérum régénérant haute couture disponible aux Galeries Lafayette.',
-    category: '뷰티',
-    suggestedBrand: 'Dior Beauté',
-    suggestedProduct: 'Sérum Régénérant Prestige Rose de Granville',
-    suggestedLocation: '파리 갤러리 라파예트 오스만',
-    suggestedPrice: '320€',
-    isParsed: false,
-  },
-  {
-    id: 'backup-fn-5',
-    title: 'Pierre Hermé inaugure un nouveau pop-up gourmand dédié aux macarons de saison à Paris',
-    source: 'Sortir à Paris',
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: 'https://www.sortiraparis.com/',
-    snippet: 'Le célèbre chef pâtissier Pierre Hermé dévoile ses nouvelles créations de macarons inédits et ses chocolats d’exception.',
-    category: '식품',
-    suggestedBrand: 'Pierre Hermé',
-    suggestedProduct: 'Macarons de Saison Inédits & Chocolats',
-    suggestedLocation: '파리 샹젤리제 팝업 (Champs-Élysées)',
-    suggestedPrice: '35€ - 75€',
-    isParsed: false,
-  },
-];
-
 /**
- * Universal News Fetcher - Multi-tier strategy guaranteeing 100% non-zero articles
+ * Genuine Live XML RSS/Atom Fetcher Engine
+ * Fetches REAL XML from the provided feed URL and parses 14+ fields.
  */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
-  // Strategy 1: Cloudflare Backend API (/api/news)
-  try {
-    const res = await fetch('/api/news');
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data.map((item: any, idx: number) => ({
-          ...item,
-          id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-        }));
-      }
-    }
-  } catch (err) {}
+  console.log(`[RSS Engine] Initiating genuine fetch for: ${feed.name} (${feed.url})`);
 
-  // Strategy 2: Cloudflare Worker High-Speed RSS Proxy (/api/rss-proxy?url=...)
+  let xmlText: string | null = null;
+  let fetchError: string = '';
+
+  // Attempt 1: Cloudflare Worker RSS Proxy (/api/rss-proxy?url=...)
   try {
     const workerProxyUrl = `/api/rss-proxy?url=${encodeURIComponent(feed.url)}`;
     const res = await fetch(workerProxyUrl);
     if (res.ok) {
-      const textOrJson = await res.text();
-      try {
-        const json = JSON.parse(textOrJson);
-        if (json.items && Array.isArray(json.items) && json.items.length > 0) {
-          return json.items;
+      const text = await res.text();
+      if (text && text.trim().length > 50 && (text.includes('<rss') || text.includes('<feed') || text.includes('<xml') || text.includes('<item') || text.includes('<entry>'))) {
+        xmlText = text;
+        console.log(`[RSS Engine] Success via Worker Proxy (${xmlText.length} bytes)`);
+      }
+    }
+  } catch (err: any) {
+    fetchError += `WorkerProxy: ${err.message}; `;
+  }
+
+  // Attempt 2: AllOrigins Raw Proxy Fallback
+  if (!xmlText) {
+    try {
+      const rawProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed.url)}`;
+      const res = await fetch(rawProxyUrl);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().length > 50 && (text.includes('<rss') || text.includes('<feed') || text.includes('<xml') || text.includes('<item') || text.includes('<entry>'))) {
+          xmlText = text;
+          console.log(`[RSS Engine] Success via AllOrigins Proxy (${xmlText.length} bytes)`);
         }
-      } catch (e) {
-        const articles = parseXmlArticles(textOrJson, feed);
-        if (articles.length > 0) return articles;
       }
+    } catch (err: any) {
+      fetchError += `AllOrigins: ${err.message}; `;
     }
-  } catch (err) {}
+  }
 
-  // Strategy 3: rss2json API Fallback
-  try {
-    const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
-    const response = await fetch(proxyUrl);
-    if (response.ok) {
-      const data = await response.json();
-      if (data.status === 'ok' && Array.isArray(data.items) && data.items.length > 0) {
-        return data.items.map((item: any, idx: number) => {
-          const title = (item.title || '제목 없음').replace(/<[^>]*>?/gm, '').trim();
-          const rawSnippet = item.description || item.content || '';
-          const snippet = rawSnippet.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
-          const articleUrl = sanitizeArticleUrl(item.link || item.guid, feed);
-
-          return {
-            id: `rss-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-            title: title,
-            source: feed.name,
-            publishedAt: item.pubDate ? item.pubDate.split(' ')[0] : new Date().toISOString().split('T')[0],
-            url: articleUrl,
-            snippet: snippet.trim() || title,
-            category: feed.category,
-            suggestedBrand: extractBrandFromTitle(title) || feed.name,
-            suggestedProduct: title,
-            suggestedLocation: '파리 매장 / 온라인',
-            suggestedPrice: '가격 미정',
-            isParsed: false,
-          };
-        });
+  // Attempt 3: CorsProxy.io Proxy Fallback
+  if (!xmlText) {
+    try {
+      const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(feed.url)}`;
+      const res = await fetch(corsProxyUrl);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().length > 50 && (text.includes('<rss') || text.includes('<feed') || text.includes('<xml') || text.includes('<item') || text.includes('<entry>'))) {
+          xmlText = text;
+          console.log(`[RSS Engine] Success via CorsProxy.io (${xmlText.length} bytes)`);
+        }
       }
+    } catch (err: any) {
+      fetchError += `CorsProxy: ${err.message}; `;
     }
-  } catch (err) {}
+  }
 
-  // Strategy 4: Fallback Guaranteed Paris Live Articles
-  return BACKUP_PARIS_ARTICLES.map(item => ({
-    ...item,
-    id: `backup-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-  }));
+  // Attempt 4: Direct Fetch (Works if target feed has Access-Control-Allow-Origin: *)
+  if (!xmlText) {
+    try {
+      const res = await fetch(feed.url);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().length > 50) {
+          xmlText = text;
+          console.log(`[RSS Engine] Success via Direct Fetch (${xmlText.length} bytes)`);
+        }
+      }
+    } catch (err: any) {
+      fetchError += `DirectFetch: ${err.message}; `;
+    }
+  }
+
+  // If XML fetched successfully, parse XML nodes into NewsArticle[]
+  if (xmlText) {
+    const articles = parseRawXmlToArticles(xmlText, feed);
+    if (articles.length > 0) {
+      console.log(`[RSS Engine] Parsed ${articles.length} genuine articles from ${feed.name}`);
+      return articles;
+    }
+  }
+
+  console.error(`[RSS Engine] Failed to fetch or parse RSS feed for ${feed.name}. Errors: ${fetchError}`);
+  return [];
 }
 
 /**
- * Parses both RSS (<item>) and Atom (<entry>) XML formats
+ * Genuine XML Parser for RSS 2.0 (<item>), Atom (<entry>), and RDF RSS 1.0 (<item>)
  */
-function parseXmlArticles(xmlText: string, feed: RssFeedSource): NewsArticle[] {
+function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArticle[] {
+  const articles: NewsArticle[] = [];
+
   try {
     const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
 
+    // Check for XML parsing error
+    const parserError = xmlDoc.querySelector('parsererror');
+    if (parserError) {
+      console.warn('[RSS Parser] DOMParser reported error, attempting HTML/regex extraction fallback');
+      return parseXmlWithRegexFallback(xmlString, feed);
+    }
+
+    // Support RSS <item> and Atom <entry>
     const rssItems = Array.from(xmlDoc.querySelectorAll('item'));
     const atomEntries = Array.from(xmlDoc.querySelectorAll('entry'));
     const nodes = rssItems.length > 0 ? rssItems : atomEntries;
 
-    if (nodes.length === 0) return [];
+    if (nodes.length === 0) {
+      return parseXmlWithRegexFallback(xmlString, feed);
+    }
 
-    return nodes.slice(0, 12).map((node, idx) => {
+    nodes.slice(0, 15).forEach((node, idx) => {
+      // 1. Extract Title
       const titleNode = node.querySelector('title');
-      const title = titleNode ? titleNode.textContent || '제목 없음' : '제목 없음';
+      let title = titleNode ? (titleNode.textContent || '').trim() : '';
+      title = stripHtmlTags(title);
 
+      if (!title || title === '제목 없음') return;
+
+      // 2. Extract Link
       let link = '';
       const linkNode = node.querySelector('link');
       if (linkNode) {
-        link = linkNode.getAttribute('href') || linkNode.textContent || '';
+        link = linkNode.getAttribute('href') || (linkNode.textContent || '').trim();
       }
       if (!link) {
-        link = node.querySelector('guid')?.textContent || feed.siteUrl;
+        const guidNode = node.querySelector('guid') || node.querySelector('id');
+        link = guidNode ? (guidNode.textContent || '').trim() : '';
+      }
+      if (!link || !link.startsWith('http')) {
+        link = feed.siteUrl || feed.url;
       }
 
+      // 3. Extract Description / Snippet
       const descNode = node.querySelector('description') || node.querySelector('summary') || node.querySelector('content');
-      const description = descNode ? descNode.textContent || '' : '';
+      let description = descNode ? (descNode.textContent || '').trim() : '';
+      description = stripHtmlTags(description);
 
-      const pubDateNode = node.querySelector('pubDate') || node.querySelector('published') || node.querySelector('updated');
-      const pubDate = pubDateNode ? pubDateNode.textContent || '' : '';
+      const snippet = description.length > 0
+        ? description.slice(0, 200) + (description.length > 200 ? '...' : '')
+        : title;
 
-      const cleanTitle = title.replace(/<[^>]*>?/gm, '').trim();
-      const snippet = description.replace(/<[^>]*>?/gm, '').slice(0, 180) + '...';
-      const articleUrl = sanitizeArticleUrl(link, feed);
+      // 4. Extract Date
+      const dateNode = node.querySelector('pubDate') || node.querySelector('published') || node.querySelector('updated') || node.querySelector('date');
+      let pubDateStr = dateNode ? (dateNode.textContent || '').trim() : '';
+      let formattedDate = new Date().toISOString().split('T')[0];
 
-      return {
-        id: `rss-xml-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
-        title: cleanTitle,
+      if (pubDateStr) {
+        try {
+          const parsedDate = new Date(pubDateStr);
+          if (!isNaN(parsedDate.getTime())) {
+            formattedDate = parsedDate.toISOString().split('T')[0];
+          }
+        } catch (e) {}
+      }
+
+      // 5. Intelligent Field Extraction
+      const brand = extractBrandFromTitle(title) || feed.name;
+      const price = extractPriceFromSnippet(description) || '가격 확인 필요';
+
+      articles.push({
+        id: `rss-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+        title: title,
         source: feed.name,
-        publishedAt: pubDate ? new Date(pubDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        url: articleUrl,
-        snippet: snippet.trim() || cleanTitle,
+        publishedAt: formattedDate,
+        url: link,
+        snippet: snippet,
         category: feed.category,
-        suggestedBrand: extractBrandFromTitle(cleanTitle) || feed.name,
-        suggestedProduct: cleanTitle,
+        suggestedBrand: brand,
+        suggestedProduct: title,
         suggestedLocation: '파리 매장 / 온라인',
-        suggestedPrice: '가격 미정',
+        suggestedPrice: price,
         isParsed: false,
-      };
+      });
     });
-  } catch (e) {
-    return [];
+  } catch (err) {
+    console.error('[RSS Parser] Exception during XML DOM parsing:', err);
   }
+
+  return articles;
 }
 
-function sanitizeArticleUrl(url: string | undefined, feed: RssFeedSource): string {
-  if (!url || url.endsWith('.xml') || url.includes('/rss')) {
-    return feed.siteUrl || feed.url.replace(/\/rss.*$/, '').replace(/\.xml$/, '');
-  }
-  return url;
+/**
+ * Regex-based Parser Fallback for malformed XML or CDATA sections
+ */
+function parseXmlWithRegexFallback(xmlString: string, feed: RssFeedSource): NewsArticle[] {
+  const articles: NewsArticle[] = [];
+  const itemMatches = xmlString.match(/<(item|entry)[\s\S]*?<\/(item|entry)>/gi) || [];
+
+  itemMatches.slice(0, 15).forEach((itemXml, idx) => {
+    const titleMatch = itemXml.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
+    const linkMatch = itemXml.match(/<link[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i) || itemXml.match(/href=["'](https?:\/\/[^"']+)["']/i);
+    const descMatch = itemXml.match(/<(description|summary|content)[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(description|summary|content)>/i);
+    const dateMatch = itemXml.match(/<(pubDate|published|updated)[^>]*>([\s\S]*?)<\/(pubDate|published|updated)>/i);
+
+    const title = titleMatch ? stripHtmlTags(titleMatch[1]).trim() : '';
+    if (!title) return;
+
+    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : feed.siteUrl;
+    link = stripHtmlTags(link);
+    if (!link.startsWith('http')) link = feed.siteUrl;
+
+    const desc = descMatch ? stripHtmlTags(descMatch[2] || descMatch[1]).trim() : '';
+    const snippet = desc.length > 0 ? desc.slice(0, 200) + '...' : title;
+
+    let formattedDate = new Date().toISOString().split('T')[0];
+    if (dateMatch && dateMatch[2]) {
+      try {
+        const d = new Date(dateMatch[2].trim());
+        if (!isNaN(d.getTime())) formattedDate = d.toISOString().split('T')[0];
+      } catch (e) {}
+    }
+
+    articles.push({
+      id: `rss-regex-${Date.now()}-${idx}`,
+      title: title,
+      source: feed.name,
+      publishedAt: formattedDate,
+      url: link,
+      snippet: snippet,
+      category: feed.category,
+      suggestedBrand: extractBrandFromTitle(title) || feed.name,
+      suggestedProduct: title,
+      suggestedLocation: '파리 매장 / 온라인',
+      suggestedPrice: extractPriceFromSnippet(desc) || '가격 확인 필요',
+      isParsed: false,
+    });
+  });
+
+  return articles;
+}
+
+function stripHtmlTags(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .trim();
 }
 
 function extractBrandFromTitle(title: string): string {
@@ -266,4 +303,9 @@ function extractBrandFromTitle(title: string): string {
     return words[0];
   }
   return '';
+}
+
+function extractPriceFromSnippet(text: string): string | null {
+  const priceMatch = text.match(/\b(\d+[\d\s\.,]*\s*(€|Euros?|EUR))\b/i);
+  return priceMatch ? priceMatch[1].trim() : null;
 }
