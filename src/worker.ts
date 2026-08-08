@@ -131,7 +131,7 @@ export default {
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       });
     }
@@ -161,7 +161,7 @@ export default {
               headers: {
                 'Content-Type': 'application/xml; charset=utf-8',
                 'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 'max-age=300',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
               },
             });
           }
@@ -180,13 +180,13 @@ export default {
               headers: {
                 'Content-Type': 'application/xml; charset=utf-8',
                 'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
               },
             });
           }
         }
       } catch (err) {}
 
-      // Try 3: Return Real Paris Live Articles Fallback JSON
       return new Response(JSON.stringify({ status: 'fallback', items: REAL_PARIS_NEWS_DATA }), {
         status: 200,
         headers: {
@@ -237,7 +237,16 @@ export default {
     }
 
     if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
+      const assetRes = await env.ASSETS.fetch(request);
+      const newHeaders = new Headers(assetRes.headers);
+      newHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      newHeaders.set('Pragma', 'no-cache');
+      newHeaders.set('Expires', '0');
+      return new Response(assetRes.body, {
+        status: assetRes.status,
+        statusText: assetRes.statusText,
+        headers: newHeaders,
+      });
     }
 
     return new Response('Not Found', { status: 404 });
