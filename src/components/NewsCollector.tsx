@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Sparkles } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
 import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
@@ -107,7 +107,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
   const handleFetchAllRss = async () => {
     setIsFetchingRss(true);
-    setRssMessage('FashionNetwork FR 및 프랑스/영문 언론사 라이브 RSS 3중 검색식 파싱 중...');
+    setRssMessage('FashionNetwork, Google News Indie & 럭셔리 라이브 RSS 파싱 중...');
     let allNew: NewsArticle[] = [];
     for (const source of PRESET_RSS_SOURCES) {
       const articles = await fetchRssArticles(source);
@@ -125,10 +125,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           sendProductApprovalRequest(tgConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
         }
       }
-      setRssMessage(`⚡ 총 ${count}개의 최신 파리 기사가 DB Inbox에 자동 등록 완료되었습니다!`);
+      setRssMessage(`⚡ 총 ${count}개의 최신 인디 & 럭셔리 기사가 DB Inbox에 자동 등록 완료되었습니다!`);
     } else {
       onAddNewsArticles(allNew);
-      setRssMessage(`총 ${allNew.length}개의 프랑스 및 영문 실시간 속보 기사를 성공적으로 수집했습니다!`);
+      setRssMessage(`총 ${allNew.length}개의 파리 인디 & 럭셔리 속보 기사를 성공적으로 수집했습니다!`);
     }
 
     setIsFetchingRss(false);
@@ -168,10 +168,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     { name: 'Les Échos', category: '경제/테크', url: 'https://www.lesechos.fr' },
     { name: 'Le Parisien', category: '파리 라이프', url: 'https://www.leparisien.fr' },
     { name: 'BFM Business', category: '비즈니스/산업', url: 'https://www.bfmbusiness.bfmtv.com' },
-    { name: 'Maddyness', category: '스타트업/테크', url: 'https://www.maddyness.com' },
+    { name: 'Maddyness', category: '스타트업/테크/인디', url: 'https://www.maddyness.com' },
     { name: 'FashionNetwork', category: '패션/뷰티 전문', url: 'https://fr.fashionnetwork.com' },
-    { name: 'Sortir à Paris', category: '팝업/디저트/문화', url: 'https://www.sortiraparis.com' },
-    { name: 'Time Out Paris', category: '트렌디 스팟', url: 'https://www.timeout.fr/paris' },
+    { name: 'Sortir à Paris', category: '팝업/인디스팟/문화', url: 'https://www.sortiraparis.com' },
+    { name: 'Time Out Paris', category: '트렌디/인디 팝업', url: 'https://www.timeout.fr/paris' },
     { name: 'Vogue France', category: '럭셔리 패션 매거진', url: 'https://www.vogue.fr' },
     { name: 'L\'Officiel Paris', category: '하이패션 매거진', url: 'https://www.lofficiel.com' },
     { name: 'Elle France', category: '뷰티/패션 매거진', url: 'https://www.elle.fr' },
@@ -182,7 +182,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     { name: 'Numéro Magazine', category: '예술/디자인 매거진', url: 'https://www.numero.com' },
     { name: 'AD Magazine FR', category: '인테리어/디자인', url: 'https://www.admagazine.fr' },
     { name: 'Madame Figaro', category: '라이프/뷰티', url: 'https://madame.lefigaro.fr' },
-    { name: 'Milk Magazine', category: '키즈/라이프 매거진', url: 'https://www.milkmagazine.net' },
+    { name: 'Milk Magazine', category: '인디 라이프/키즈', url: 'https://www.milkmagazine.net' },
     { name: 'LSA Conso', category: '유통/신제품 출시', url: 'https://www.lsa-conso.fr' },
     { name: 'PR Newswire FR', category: '보도자료 배포망', url: 'https://www.prnewswire.com/fr/' },
     { name: 'Business Wire FR', category: '글로벌 런칭 배포', url: 'https://www.businesswire.com' },
@@ -192,33 +192,32 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
   // SNS 해시태그 딥링크 리스트
   const snsHashtags = [
+    { name: '#marqueindependante', desc: '파리 인디 브랜드 태그 🎨', insta: 'https://www.instagram.com/explore/tags/marqueindependante/', tiktok: 'https://www.tiktok.com/tag/marqueindependante', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=marqueindependante' },
     { name: '#lancementproduit', desc: '제품 런칭 공식 태그', insta: 'https://www.instagram.com/explore/tags/lancementproduit/', tiktok: 'https://www.tiktok.com/tag/lancementproduit', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=lancementproduit' },
     { name: '#nouveauté', desc: '신제품/신상 키워드', insta: 'https://www.instagram.com/explore/tags/nouveaut%C3%A9/', tiktok: 'https://www.tiktok.com/tag/nouveaute', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=nouveaut%C3%A9' },
     { name: '#popupparis', desc: '파리 팝업스토어 현장', insta: 'https://www.instagram.com/explore/tags/popupparis/', tiktok: 'https://www.tiktok.com/tag/popupparis', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=popupparis' },
     { name: '#parislaunch', desc: '파리 런칭 속보', insta: 'https://www.instagram.com/explore/tags/parislaunch/', tiktok: 'https://www.tiktok.com/tag/parislaunch', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=parislaunch' },
     { name: '#ouvertureparis', desc: '파리 매장 신규 오픈', insta: 'https://www.instagram.com/explore/tags/ouvertureparis/', tiktok: 'https://www.tiktok.com/tag/ouvertureparis', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=ouvertureparis' },
-    { name: '#madeinfrance', desc: '메이드 인 프랑스', insta: 'https://www.instagram.com/explore/tags/madeinfrance/', tiktok: 'https://www.tiktok.com/tag/madeinfrance', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=madeinfrance' },
   ];
 
-  // 정밀 키워드 프리셋 14종
+  // 정밀 키워드 프리셋 16종 (인디 브랜드 & 니치 뷰티 포함)
   const presetQueries = [
+    { label: '🎨 파리 인디 크리에이터 3중', query: `("Paris" OR "Marais") AND ("marque indépendante" OR "jeune créateur" OR "boutique éphémère") AND (mode OR beauté)` },
+    { label: '🌿 니치 뷰티 & 향수 (영문)', query: `("Paris" OR "French") AND ("niche beauty" OR "indie perfume" OR "artisanal cosmetics")` },
     { label: '영어 3중 고급 (최상급)', query: `("Paris" OR "French") AND ("new collection" OR "product launch" OR "flagship store" OR "pop-up store") AND (fashion OR beauty OR luxury)` },
-    { label: '영어 팝업/리미티드', query: `("Paris" OR "Parisian") AND ("popup" OR "pop-up" OR "boutique opening" OR "limited edition") AND (brand OR designer)` },
-    { label: '영어 패션위크', query: `("Paris Fashion Week" OR "Paris flagship") AND ("new line" OR "unveiled" OR "launches")` },
     { label: '프랑스어 3중 고급', query: `("lancement" OR "nouveauté" OR "disponible" OR "exclusivité") AND ("Paris" OR "France") AND (produit OR collection)` },
     { label: '프랑스어 팝업스토어', query: `"boutique éphémère" Paris nouveauté` },
+    { label: '영어 팝업/리미티드', query: `("Paris" OR "Parisian") AND ("popup" OR "pop-up" OR "boutique opening" OR "limited edition")` },
     { label: '프랑스 공식출시', query: `"disponible en France" nouveau` },
-    { label: '영어 기본', query: `"Paris launch" new product` },
-    { label: '프랑스어 기본', query: `"lancement à Paris" produit` },
-    { label: '파리 플래그십', query: `"Paris flagship store" new product` },
+    { label: '영어 패션위크', query: `("Paris Fashion Week" OR "Paris flagship") AND ("new line" OR "unveiled" OR "launches")` },
     { label: '뷰티 영문', query: `beauty Paris launch new product` },
     { label: '뷰티 프랑스어', query: `beauté "lancement à Paris"` },
-    { label: '디저트/미식 영문', query: `pastry gourmet Paris launch` },
+    { label: '디저트/아티장 미식', query: `artisan pâtisserie Paris nouveauté` },
+    { label: '마레 지구 팝업스토어', query: `"Le Marais" "pop-up" Paris launch` },
   ];
 
-  // 고급 3중 정밀 Boolean 검색식 (프랑스어 & 영어 최상급)
+  const recommendedBoolIndieEn = `("Paris" OR "French") AND ("indie brand" OR "emerging designer" OR "niche beauty" OR "artisanal" OR "pop-up store") AND (fashion OR beauty OR lifestyle OR perfume)`;
   const recommendedBoolQueryFr = `("lancement" OR "nouveauté" OR "disponible" OR "exclusivité" OR "boutique éphémère" OR "pop-up") AND ("Paris" OR "France") AND (produit OR collection OR ouverture OR flagship OR "avant-première")`;
-  const recommendedBoolQueryEn = `("Paris" OR "French") AND ("new collection" OR "product launch" OR "flagship store" OR "pop-up store" OR "exclusive release" OR "capsule collection") AND (fashion OR beauty OR luxury OR footwear OR jewelry)`;
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -244,8 +243,8 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="card-header">
             <div className="icon-wrapper gold"><Search size={20} /></div>
             <div>
-              <h3>Google Alerts & 정밀 키워드 조합기 (영어/프랑스어 14종)</h3>
-              <p className="text-muted">글로벌 명품 에이전시 특화 3중 영문/프랑스어 쿼리로 최신 속보 수집</p>
+              <h3>Google Alerts & 정밀 키워드 조합기 (인디/니치 포함 16종)</h3>
+              <p className="text-muted">파리 소규모 인디 브랜드, 신진 디자이너, 니치 뷰티 & 럭셔리 통합 3중 검색식</p>
             </div>
           </div>
 
@@ -259,18 +258,19 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             ))}
           </div>
 
-          <div className="bool-query-box" style={{ marginBottom: '8px' }}>
-            <div className="bool-title">
-              <span>🇬🇧 영어 파리 전용 최상급 3중 정밀 검색식 (권장)</span>
+          <div className="bool-query-box" style={{ marginBottom: '8px', background: '#f0fdf4', border: '1px solid #86efac' }}>
+            <div className="bool-title" style={{ color: '#166534' }}>
+              <span>🎨 파리 소규모 인디 브랜드 & 니치 뷰티 전용 3중 검색식 (추천)</span>
               <button 
                 className="btn-text" 
-                onClick={() => handleCopy(recommendedBoolQueryEn, 'bool_en')}
+                onClick={() => handleCopy(recommendedBoolIndieEn, 'bool_indie')}
+                style={{ color: '#15803d' }}
               >
-                {copiedQuery === 'bool_en' ? <Check size={14} /> : <Copy size={14} />}
-                <span>영문 검색식 복사</span>
+                {copiedQuery === 'bool_indie' ? <Check size={14} /> : <Copy size={14} />}
+                <span>인디 검색식 복사</span>
               </button>
             </div>
-            <textarea readOnly value={recommendedBoolQueryEn} className="code-textarea" style={{ height: '55px' }} />
+            <textarea readOnly value={recommendedBoolIndieEn} className="code-textarea" style={{ height: '55px', background: '#ffffff' }} />
           </div>
 
           <div className="bool-query-box">
@@ -294,11 +294,11 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <div className="icon-wrapper navy"><Rss size={20} /></div>
             <div>
               <h3>프랑스 파리 추천 언론 & 매거진 (24선)</h3>
-              <p className="text-muted">보그, 엘르, GQ, 바자 등 하이엔드 매거진 & 보도자료 채널</p>
+              <p className="text-muted">인디 디자이너, 팝업스토어, 니치 뷰티 & 하이엔드 매거진</p>
             </div>
           </div>
 
-          <div className="media-grid" style={{ maxHeight: '410px', overflowY: 'auto', paddingRight: '4px' }}>
+          <div className="media-grid" style={{ maxHeight: '430px', overflowY: 'auto', paddingRight: '4px' }}>
             {mediaList.map((media, idx) => (
               <a 
                 key={idx} 
@@ -324,7 +324,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="icon-wrapper rose"><Share2 size={20} /></div>
           <div>
             <h3>SNS & 커뮤니티 트렌드 탐색기 (Instagram / TikTok / LinkedIn)</h3>
-            <p className="text-muted">인스타그램, 틱톡, LinkedIn의 프랑스어 핵심 해시태그 실시간 원클릭 딥링크 탐색</p>
+            <p className="text-muted">파리 인디 브랜드(`#marqueindependante`), 팝업 현장 핵심 해시태그 실시간 원클릭 딥링크</p>
           </div>
         </div>
 
@@ -358,7 +358,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <div className="icon-wrapper rose"><Bookmark size={20} /></div>
             <div>
               <h3>실시간 파리 속보 뉴스 & 신제품 자동 등록 엔진</h3>
-              <p className="text-muted">라이브 RSS 피드 탐지 ➔ 14개 필드 파싱 ➔ DB Inbox 직행 자동 등록</p>
+              <p className="text-muted">파리 인디 브랜드 & 럭셔리 라이브 RSS 탐지 ➔ 14개 필드 파싱 ➔ DB Inbox 직행</p>
             </div>
           </div>
 
@@ -483,7 +483,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <Bookmark size={36} className="text-muted mb-2" style={{ opacity: 0.5 }} />
             <h4 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>현재 수집 대기 목록이 0건으로 깔끔히 비워져 있습니다.</h4>
             <p className="text-muted" style={{ fontSize: '0.9rem' }}>
-              상단의 <strong>[🧪 파싱 테스트]</strong> 또는 <strong>[전체 RSS 파싱 & DB 자동 등록]</strong> 버튼을 누르시면 실시간 파리 기사가 새로 수집됩니다!
+              상단의 <strong>[🎨 파리 소규모 인디 브랜드 RSS]</strong> 또는 <strong>[전체 RSS 파싱 & DB 자동 등록]</strong> 버튼을 누르시면 실시간 기사가 수집됩니다!
             </p>
           </div>
         ) : (
@@ -543,7 +543,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                     href={article.url} 
                     target="_blank" 
                     rel="noreferrer" 
-                    className="btn-outline btn-sm"
+                    className="btn-outline btn-xs"
                   >
                     <span>원문 읽기</span>
                     <ExternalLink size={14} />

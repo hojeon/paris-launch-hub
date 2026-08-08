@@ -11,6 +11,15 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     isPreset: true,
   },
   {
+    id: 'rss-google-news-indie-paris',
+    name: 'Google News Paris Indie & Niche (파리 소규모 인디 브랜드 🎨)',
+    url: 'https://news.google.com/rss/search?q=%28%22Paris%22+OR+%22Marais%22%29+AND+%28%22indie+brand%22+OR+%22emerging+designer%22+OR+%22niche+beauty%22+OR+%22marque+ind%C3%A9pendante%22+OR+%22jeune+cr%C3%A9ateur%22+OR+%22artisan%22+OR+%22boutique+%C3%A9ph%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
+    siteUrl: 'https://news.google.com',
+    category: '패션',
+    description: '파리 소규모 인디 브랜드, 신진 크리에이터, 니치 뷰티 & 팝업스토어 특화 수집',
+    isPreset: true,
+  },
+  {
     id: 'rss-google-news-paris-bool-fr',
     name: 'Google News Paris Live (프랑스어 3중 정밀 검색식 🇫🇷)',
     url: 'https://news.google.com/rss/search?q=%28%22lancement%22+OR+%22nouveaut%C3%A9%22+OR+%22disponible%22+OR+%22exclusivit%C3%A9%22+OR+%22boutique+%C3%A9ph%C3%A8re%22+OR+%22pop-up%22%29+AND+%28%22Paris%22+OR+%22France%22%29+AND+%28produit+OR+collection+OR+ouverture+OR+flagship+OR+%22avant-premi%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
@@ -230,7 +239,7 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
         } catch (e) {}
       }
 
-      // 5. Intelligent Field Extraction (Supports English + French)
+      // 5. Intelligent Field Extraction (Supports English + French + Indie Brands)
       const brand = extractBrandFromTitle(title) || feedName;
       const price = extractPriceFromSnippet(description + ' ' + title) || '가격 확인 필요';
       const location = extractLocationFromText(title + ' ' + description) || '파리 매장 / 온라인';
@@ -293,7 +302,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
       url: link,
       snippet: snippet,
       category: normalizeCategory(feed.category || '패션'),
-      suggestedBrand: extractBrandFromTitle(title) || '파리 브랜드',
+      suggestedBrand: extractBrandFromTitle(title) || '파리 인디 브랜드',
       suggestedProduct: title,
       suggestedLocation: extractLocationFromText(title + ' ' + desc) || '파리 매장 / 온라인',
       suggestedPrice: extractPriceFromSnippet(desc + ' ' + title) || '가격 확인 필요',
@@ -345,5 +354,6 @@ function extractLocationFromText(text: string): string | null {
   if (text.includes('Galeries Lafayette') || text.includes('라파예트')) return '파리 갤러리 라파예트';
   if (text.includes('Vendôme') || text.includes('방돔')) return '파리 방돔 광장 (Place Vendôme)';
   if (text.includes('Sephora') || text.includes('세포라')) return '파리 세포라 매장';
+  if (text.includes('Saint-Germain') || text.includes('생제르맹')) return '파리 생제르맹 데프레';
   return null;
 }
