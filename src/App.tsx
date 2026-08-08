@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductItem, NewsArticle, PublishStatus, TelegramConfig } from './types';
 import { INITIAL_PRODUCTS } from './utils/sampleData';
-import { getTelegramConfig } from './utils/telegramService';
+import { getNotificationConfig } from './utils/notificationService';
 import { Navbar } from './components/Navbar';
 import { NewsCollector } from './components/NewsCollector';
 import { ProductTracker } from './components/ProductTracker';
@@ -15,7 +15,7 @@ export const App: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState<boolean>(false);
 
-  const [telegramConfig, setTelegramConfig] = useState<TelegramConfig>(() => getTelegramConfig());
+  const [telegramConfig, setTelegramConfig] = useState<any>(() => getNotificationConfig());
 
   // LocalStorage State Initialization
   const [products, setProducts] = useState<ProductItem[]>(() => {
@@ -59,14 +59,12 @@ export const App: React.FC = () => {
     setProducts((prev) => [item, ...prev]);
   };
 
-  // Genuine Single/Full Clear Removal handlers
   const handleRemoveNews = (newsId: string) => {
     setNewsList((prev) => prev.filter((n) => n.id !== newsId));
   };
 
   const handleAddNewsArticles = (newArticles: NewsArticle[]) => {
     setNewsList((prev) => {
-      // Deduplicate by URL or title
       const existingUrls = new Set(prev.map(a => a.url));
       const filteredNew = newArticles.filter(a => !existingUrls.has(a.url));
       return [...filteredNew, ...prev];
@@ -131,6 +129,7 @@ export const App: React.FC = () => {
             onRemoveNews={handleRemoveNews}
             onAddNewsArticles={handleAddNewsArticles}
             onClearNewsList={handleClearNewsList}
+            onOpenSettingsModal={() => setIsTelegramModalOpen(true)}
           />
         )}
 
@@ -168,7 +167,7 @@ export const App: React.FC = () => {
         onAddProduct={handleImportToInbox}
       />
 
-      {/* Telegram Settings Modal */}
+      {/* Notification / AI Settings Modal */}
       <TelegramSettingsModal
         isOpen={isTelegramModalOpen}
         onClose={() => setIsTelegramModalOpen(false)}

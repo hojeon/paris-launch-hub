@@ -36,6 +36,13 @@ export function saveStoredAiApiKeys(keys: string[]): void {
 }
 
 /**
+ * Checks whether at least 1 valid API key is registered
+ */
+export function hasValidAiApiKey(): boolean {
+  return getStoredAiApiKeys().length > 0;
+}
+
+/**
  * Selects next available API key in Round-Robin fashion
  */
 function getNextAiApiKey(): string | null {
@@ -47,22 +54,27 @@ function getNextAiApiKey(): string | null {
 }
 
 /**
- * Genuine Multi-Key Gemini LLM Article Gatekeeper Engine with Auto Round-Robin Rotation
+ * Strict Gemini LLM Article Gatekeeper Engine
+ * ZERO-KEY FALLBACK ELIMINATED: REQUIRES REAL GEMINI API KEY FOR AI VALIDATION.
  */
 export async function validateArticleWithAi(article: NewsArticle): Promise<AiValidationResult> {
   const title = article.title || '';
   const snippet = article.snippet || '';
   const keys = getStoredAiApiKeys();
 
-  // 1. If Multi-Keys present, execute Round-Robin Gemini API Calls with Failover!
-  if (keys.length > 0) {
-    for (let attempt = 0; attempt < keys.length; attempt++) {
-      const activeKey = getNextAiApiKey();
-      if (!activeKey) break;
+  // 🚫 STRICT RULE: Require API Key. Zero-key fallback completely killed.
+  if (keys.length === 0) {
+    throw new Error('AI_KEY_REQUIRED: Gemini API Key가 등록되지 않았습니다.');
+  }
 
-      try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey}`;
-        const prompt = `Analyze this French article to see if it's a real physical consumer product launch or pop-up collection for shopping/buying agency.
+  // Execute Round-Robin Gemini API Calls with Failover over registered keys
+  for (let attempt = 0; attempt < keys.length; attempt++) {
+    const activeKey = getNextAiApiKey();
+    if (!activeKey) break;
+
+    try {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey}`;
+      const prompt = `Analyze this French article to see if it's a real physical consumer product launch or pop-up collection for shopping/buying agency.
 Return ONLY valid JSON with no markdown formatting:
 {
   "isCommercialProduct": boolean,
@@ -76,104 +88,47 @@ Return ONLY valid JSON with no markdown formatting:
 Title: ${title}
 Snippet: ${snippet}`;
 
-        const res = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
-        });
+      const res = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-          const parsed = JSON.parse(cleanJson);
+      if (res.ok) {
+        const data = await res.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanJson);
 
-          return {
-            isCommercialProduct: Boolean(parsed.isCommercialProduct),
-            reason: `Gemini LLM (7-Key 로드밸런싱) 판정: ${parsed.reason}`,
-            brand: parsed.brand || article.suggestedBrand || '미정',
-            productName: parsed.productName || title,
-            price: parsed.price || article.suggestedPrice || '가격 확인 필요',
-            location: parsed.location || article.suggestedLocation || '파리 매장',
-            confidenceScore: 99,
-          };
-        } else if (res.status === 429) {
-          console.warn(`[7-Key Load Balancer] Key index ${attempt} hit Rate Limit (429), failing over to next Key...`);
-          continue; // Try next key in rotation!
-        }
-      } catch (err) {
-        console.warn(`[7-Key Load Balancer] Error on key index ${attempt}, trying next key...`, err);
+        return {
+          isCommercialProduct: Boolean(parsed.isCommercialProduct),
+          reason: `Gemini LLM (7-Key 로드밸런싱) 판정: ${parsed.reason}`,
+          brand: parsed.brand || article.suggestedBrand || '미정',
+          productName: parsed.productName || title,
+          price: parsed.price || article.suggestedPrice || '가격 확인 필요',
+          location: parsed.location || article.suggestedLocation || '파리 매장',
+          confidenceScore: 99,
+        };
+      } else if (res.status === 429) {
+        console.warn(`[7-Key Load Balancer] Key index ${attempt} hit Rate Limit (429), failing over to next Key...`);
+        continue;
       }
+    } catch (err) {
+      console.warn(`[7-Key Load Balancer] Error on key index ${attempt}, trying next key...`, err);
     }
   }
 
-  // 2. Zero-Key Fallback Engine (Edge Rules)
-  const combinedText = `${title}\n${snippet}`.toLowerCase();
-
-  const isCorporateOrNonProduct = 
-    combinedText.includes('redressement fiscal') ||
-    combinedText.includes('racheter') ||
-    combinedText.includes('rachat') ||
-    combinedText.includes('pourparlers') ||
-    combinedText.includes('acquisition') ||
-    combinedText.includes('fusion') ||
-    combinedText.includes('chiffre d\'affaires') ||
-    combinedText.includes('tribunal') ||
-    combinedText.includes('licenciement') ||
-    combinedText.includes('indemnité carburant');
-
-  if (isCorporateOrNonProduct) {
-    return {
-      isCommercialProduct: false,
-      reason: 'AI 게이트키퍼 판정: 기업 M&A, 세무조사, 실적 발표 또는 정치 뉴스로 구매대행 상품 아님',
-      brand: article.suggestedBrand || '미정',
-      productName: title,
-      price: '해당없음',
-      location: '해당없음',
-      confidenceScore: 0,
-    };
-  }
-
-  const hasProductSignals = 
-    combinedText.includes('collection') ||
-    combinedText.includes('nouveauté') ||
-    combinedText.includes('produit') ||
-    combinedText.includes('lancement') ||
-    combinedText.includes('pop-up') ||
-    combinedText.includes('popup') ||
-    combinedText.includes('boutique') ||
-    combinedText.includes('flagship') ||
-    combinedText.includes('éphémère') ||
-    /\d+\s*(€|eur|\$|usd|£)/i.test(combinedText);
-
-  if (!hasProductSignals && !combinedText.includes('mode') && !combinedText.includes('beauté') && !combinedText.includes('parfum')) {
-    return {
-      isCommercialProduct: false,
-      reason: 'AI 게이트키퍼 판정: 소비자가 구매 가능한 신제품/팝업 컬렉션 정보 부족',
-      brand: article.suggestedBrand || '미정',
-      productName: title,
-      price: '확인필요',
-      location: '파리',
-      confidenceScore: 20,
-    };
-  }
-
-  const brandMatch = title.split(/[:|\-–]/);
-  const brand = brandMatch.length > 1 ? brandMatch[0].trim() : (article.suggestedBrand || '파리 인디 브랜드');
-  
-  const priceMatch = combinedText.match(/\b(\d+[\d\s\.,]*\s*(€|Euros?|EUR|\$|USD|£))\b/i);
-  const price = priceMatch ? priceMatch[1].trim() : (article.suggestedPrice || '가격 확인 필요');
-
+  // If all keys failed or rate-limited
   return {
-    isCommercialProduct: true,
-    reason: 'AI 게이트키퍼 판정: 구매대행 적합 파리 실물 신제품/팝업스토어 컬렉션 100% 확정',
-    brand: brand,
+    isCommercialProduct: false,
+    reason: 'Gemini API 호출 제한 또는 키 오류로 검증 실패',
+    brand: article.suggestedBrand || '미정',
     productName: title,
-    price: price,
-    location: article.suggestedLocation || '파리 매장 / 온라인',
-    confidenceScore: 95,
+    price: '확인필요',
+    location: '파리',
+    confidenceScore: 0,
   };
 }
 
@@ -181,23 +136,32 @@ Snippet: ${snippet}`;
  * Batch AI Article Validator
  */
 export async function filterArticlesWithAi(rawArticles: NewsArticle[]): Promise<{ validProducts: NewsArticle[]; rejectedCount: number }> {
+  if (!hasValidAiApiKey()) {
+    throw new Error('AI_KEY_REQUIRED');
+  }
+
   const validProducts: NewsArticle[] = [];
   let rejectedCount = 0;
 
   for (const article of rawArticles) {
-    const aiRes = await validateArticleWithAi(article);
-    if (aiRes.isCommercialProduct) {
-      validProducts.push({
-        ...article,
-        suggestedBrand: aiRes.brand,
-        suggestedProduct: aiRes.productName,
-        suggestedPrice: aiRes.price,
-        suggestedLocation: aiRes.location,
-        isParsed: true,
-      });
-    } else {
+    try {
+      const aiRes = await validateArticleWithAi(article);
+      if (aiRes.isCommercialProduct) {
+        validProducts.push({
+          ...article,
+          suggestedBrand: aiRes.brand,
+          suggestedProduct: aiRes.productName,
+          suggestedPrice: aiRes.price,
+          suggestedLocation: aiRes.location,
+          isParsed: true,
+        });
+      } else {
+        rejectedCount++;
+        console.warn(`[Gemini LLM Rejected Non-Product]: ${article.title} -> ${aiRes.reason}`);
+      }
+    } catch (e: any) {
+      if (e.message === 'AI_KEY_REQUIRED') throw e;
       rejectedCount++;
-      console.warn(`[AI Rejected Non-Product]: ${article.title} -> ${aiRes.reason}`);
     }
   }
 

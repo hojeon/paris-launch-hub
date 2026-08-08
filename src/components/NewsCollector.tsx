@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu, ShoppingBag, TrendingUp, DollarSign, Package, AlertTriangle, Lock, Target, ShieldAlert, Sparkles, Filter } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu, ShoppingBag, TrendingUp, DollarSign, Package, AlertTriangle, Lock, Target, ShieldAlert, Sparkles, Filter, Key } from 'lucide-react';
 import { calculateImportanceScore, calculateDeepBuyingAgencySuitability } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
 import { runAiWebCrawler } from '../utils/aiCrawlerService';
 import { runSnsAutoCrawler } from '../utils/snsAutoCrawler';
 import { sendProductNotification, getNotificationConfig } from '../utils/notificationService';
-import { filterArticlesWithAi } from '../utils/aiArticleValidator';
+import { filterArticlesWithAi, hasValidAiApiKey } from '../utils/aiArticleValidator';
 
 interface NewsCollectorProps {
   newsList: NewsArticle[];
@@ -14,6 +14,7 @@ interface NewsCollectorProps {
   onRemoveNews: (newsId: string) => void;
   onAddNewsArticles: (newArticles: NewsArticle[]) => void;
   onClearNewsList?: () => void;
+  onOpenSettingsModal?: () => void;
 }
 
 export const NewsCollector: React.FC<NewsCollectorProps> = ({
@@ -22,6 +23,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   onRemoveNews,
   onAddNewsArticles,
   onClearNewsList,
+  onOpenSettingsModal,
 }) => {
   const [copiedQuery, setCopiedQuery] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('전체');
@@ -30,6 +32,16 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const [rssMessage, setRssMessage] = useState<string | null>(null);
   const [customRssUrl, setCustomRssUrl] = useState<string>('');
   const [autoImportDirectly, setAutoImportDirectly] = useState<boolean>(false);
+
+  // Helper to ensure Gemini API key exists
+  const checkAiKeyOrPrompt = (): boolean => {
+    if (!hasValidAiApiKey()) {
+      setRssMessage('⚠️ [Gemini API Key 필수] 정밀 AI 수집을 위해 상단 연동 설정에서 API Key를 최소 1개 이상 입력해 주세요!');
+      if (onOpenSettingsModal) onOpenSettingsModal();
+      return false;
+    }
+    return true;
+  };
 
   const convertArticleToProduct = (article: NewsArticle): Omit<ProductItem, 'id'> => {
     const today = new Date().toISOString().split('T')[0];
@@ -52,11 +64,11 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       launchDate: '일정 확인 필요',
       location: article.suggestedLocation || '파리 매장/팝업',
       price: article.suggestedPrice || '가격 확인 필요',
-      keyFeatures: `${article.snippet}\n\n🇰🇷 [AI 실시간 검증 구매대행 심층 리포트 (택스프리 0% 전제)]:\n- 적합도: ${deepBuying.scorePercent}% (${deepBuying.badgeText})\n- 차익 분석: ${deepBuying.priceArbitrage}\n- 부피무게 평가: ${deepBuying.volumetricRisk}\n- 바잉 난이도: ${deepBuying.sourcingDifficulty}\n- 통관 규제: ${deepBuying.customsCheck}\n- 타겟층: ${deepBuying.targetAudienceTag}`,
+      keyFeatures: `${article.snippet}\n\n🇰🇷 [Gemini LLM AI 정밀 검증 구매대행 리포트 (택스프리 0% 전제)]:\n- 적합도: ${deepBuying.scorePercent}% (${deepBuying.badgeText})\n- 차익 분석: ${deepBuying.priceArbitrage}\n- 부피무게 평가: ${deepBuying.volumetricRisk}\n- 바잉 난이도: ${deepBuying.sourcingDifficulty}\n- 통관 규제: ${deepBuying.customsCheck}\n- 타겟층: ${deepBuying.targetAudienceTag}`,
       targetAudience: deepBuying.targetAudienceTag,
       sourceUrl: article.url,
       sourceName: article.source,
-      reliability: 'AI LLM 실시간 검증 완료',
+      reliability: 'Gemini 1.5 LLM 정밀 검증 완료',
       importance: level,
       importanceScore: score,
       scoreDetails: initialDetails,
@@ -67,11 +79,13 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     };
   };
 
-  // 1, 3, 4번 통합: 수집과 동시에 AI 실시간 게이트키퍼가 무관 기사 100% 차단
+  // 1, 3, 4번 통합: Gemini API Key 필수 확인 후 실시간 LLM 차단 수집
   const handleRunFullAutomationBot = async () => {
+    if (!checkAiKeyOrPrompt()) return;
+
     setIsAiCrawling(true);
     setIsFetchingRss(true);
-    setRssMessage('🤖 [AI 실시간 수집 엔진] 탐색과 동시에 AI가 M&A/세무조사 무관 기사를 실시간 차단하는 중...');
+    setRssMessage('🤖 [Gemini LLM Engine] 7-Key 로드밸런서가 실시간으로 M&A/세무조사 무관 기사를 차단하며 수집 중...');
 
     let allRawCollected: NewsArticle[] = [];
 
@@ -90,22 +104,25 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       allRawCollected = [...allRawCollected, ...articles];
     }
 
-    // ⚡ 수집과 동시에 AI 실시간 심층 통과 검증 (AI Gatekeeper Filtering at Collection Time)
-    const { validProducts, rejectedCount } = await filterArticlesWithAi(allRawCollected);
+    try {
+      const { validProducts, rejectedCount } = await filterArticlesWithAi(allRawCollected);
 
-    let count = 0;
-    const notifConfig = getNotificationConfig();
-    for (const article of validProducts) {
-      const prod = convertArticleToProduct(article);
-      onImportToInbox(prod);
-      count++;
-      if (notifConfig.enabled) {
-        sendProductNotification(notifConfig, { ...prod, id: `auto-bot-${Date.now()}` } as ProductItem);
+      let count = 0;
+      const notifConfig = getNotificationConfig();
+      for (const article of validProducts) {
+        const prod = convertArticleToProduct(article);
+        onImportToInbox(prod);
+        count++;
+        if (notifConfig.enabled) {
+          sendProductNotification(notifConfig, { ...prod, id: `auto-bot-${Date.now()}` } as ProductItem);
+        }
       }
-    }
 
-    onAddNewsArticles(validProducts);
-    setRssMessage(`🚀 [AI 수집 완결] 수집 시점에 AI가 무관 기사 ${rejectedCount}건 차단! 100% 검증된 파리 구매대행 실물 신제품 ${validProducts.length}건만 바로 수집되었습니다!`);
+      onAddNewsArticles(validProducts);
+      setRssMessage(`🚀 [Gemini AI 수집 완결] Gemini LLM이 무관 기사 ${rejectedCount}건 100% 차단! 검증된 파리 실물 신제품 ${validProducts.length}건만 등록되었습니다!`);
+    } catch (e: any) {
+      checkAiKeyOrPrompt();
+    }
 
     setIsAiCrawling(false);
     setIsFetchingRss(false);
@@ -113,28 +130,33 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   };
 
   const handleFetchPresetRss = async (feed: RssFeedSource) => {
+    if (!checkAiKeyOrPrompt()) return;
+
     setIsFetchingRss(true);
-    setRssMessage(`${feed.name} 수집 시점에 AI가 무관 기사를 실시간 차단 중...`);
+    setRssMessage(`${feed.name} 수집 시점에 Gemini AI가 무관 기사를 실시간 차단 중...`);
     const articles = await fetchRssArticles(feed);
     
-    // ⚡ 수집 시점 AI 실시간 통과 검증
-    const { validProducts, rejectedCount } = await filterArticlesWithAi(articles);
+    try {
+      const { validProducts, rejectedCount } = await filterArticlesWithAi(articles);
 
-    if (autoImportDirectly) {
-      let count = 0;
-      const notifConfig = getNotificationConfig();
-      for (const article of validProducts) {
-        const prod = convertArticleToProduct(article);
-        onImportToInbox(prod);
-        count++;
-        if (notifConfig.enabled) {
-          sendProductNotification(notifConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
+      if (autoImportDirectly) {
+        let count = 0;
+        const notifConfig = getNotificationConfig();
+        for (const article of validProducts) {
+          const prod = convertArticleToProduct(article);
+          onImportToInbox(prod);
+          count++;
+          if (notifConfig.enabled) {
+            sendProductNotification(notifConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
+          }
         }
+        setRssMessage(`⚡ Gemini AI가 무관 기사 ${rejectedCount}건을 차단하고 ${count}개의 실물 신제품만 DB Inbox에 등록했습니다!`);
+      } else {
+        onAddNewsArticles(validProducts);
+        setRssMessage(`${feed.name} 피드에서 Gemini AI가 검증한 ${validProducts.length}개의 실물 신제품만 수집되었습니다! (무관 기사 ${rejectedCount}건 차단됨)`);
       }
-      setRssMessage(`⚡ AI가 무관 기사 ${rejectedCount}건을 차단하고 ${count}개의 실물 신제품만 DB Inbox에 즉시 등록했습니다!`);
-    } else {
-      onAddNewsArticles(validProducts);
-      setRssMessage(`${feed.name} 피드에서 AI가 검증한 ${validProducts.length}개의 실물 신제품 기사만 수집되었습니다! (무관 기사 ${rejectedCount}건 자동 차단됨)`);
+    } catch (e) {
+      checkAiKeyOrPrompt();
     }
 
     setIsFetchingRss(false);
@@ -142,32 +164,37 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   };
 
   const handleFetchAllRss = async () => {
+    if (!checkAiKeyOrPrompt()) return;
+
     setIsFetchingRss(true);
-    setRssMessage('라이브 RSS 파싱 및 수집과 동시에 AI가 무관 기사를 실시간 차단 중...');
+    setRssMessage('Gemini AI가 무관 기사를 실시간 통과 검증하며 RSS 파싱 중...');
     let allNew: NewsArticle[] = [];
     for (const source of PRESET_RSS_SOURCES) {
       const articles = await fetchRssArticles(source);
       allNew = [...allNew, ...articles];
     }
 
-    // ⚡ 수집 시점 AI 실시간 통과 검증
-    const { validProducts, rejectedCount } = await filterArticlesWithAi(allNew);
+    try {
+      const { validProducts, rejectedCount } = await filterArticlesWithAi(allNew);
 
-    if (autoImportDirectly) {
-      let count = 0;
-      const notifConfig = getNotificationConfig();
-      for (const article of validProducts) {
-        const prod = convertArticleToProduct(article);
-        onImportToInbox(prod);
-        count++;
-        if (notifConfig.enabled) {
-          sendProductNotification(notifConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
+      if (autoImportDirectly) {
+        let count = 0;
+        const notifConfig = getNotificationConfig();
+        for (const article of validProducts) {
+          const prod = convertArticleToProduct(article);
+          onImportToInbox(prod);
+          count++;
+          if (notifConfig.enabled) {
+            sendProductNotification(notifConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
+          }
         }
+        setRssMessage(`⚡ Gemini AI 수집 완료! 무관 기사 ${rejectedCount}건 차단 후 총 ${count}개의 구매대행 실물 신제품이 수집되었습니다!`);
+      } else {
+        onAddNewsArticles(validProducts);
+        setRssMessage(`Gemini AI가 무관 기사 ${rejectedCount}건을 걸러내고, 총 ${validProducts.length}개의 파리 실물 신제품만 수집했습니다!`);
       }
-      setRssMessage(`⚡ AI 수집 완료! 무관 기사 ${rejectedCount}건 차단 후 총 ${count}개의 구매대행 실물 신제품이 DB Inbox에 수집 완료되었습니다!`);
-    } else {
-      onAddNewsArticles(validProducts);
-      setRssMessage(`AI가 무관 기사 ${rejectedCount}건을 걸러내고, 총 ${validProducts.length}개의 파리 실물 신제품 기사만 선별 수집했습니다!`);
+    } catch (e) {
+      checkAiKeyOrPrompt();
     }
 
     setIsFetchingRss(false);
@@ -176,8 +203,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
   const handleFetchCustomRss = async () => {
     if (!customRssUrl.trim()) return;
+    if (!checkAiKeyOrPrompt()) return;
+
     setIsFetchingRss(true);
-    setRssMessage('커스텀 RSS 수집 및 AI 실시간 검증 중...');
+    setRssMessage('커스텀 RSS 수집 및 Gemini AI 실시간 검증 중...');
     const customSource: RssFeedSource = {
       id: `rss-custom-${Date.now()}`,
       name: '커스텀 RSS 피드',
@@ -186,37 +215,26 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       description: '사용자 지정 RSS 수집원',
     };
     const articles = await fetchRssArticles(customSource);
-    const { validProducts } = await filterArticlesWithAi(articles);
+    
+    try {
+      const { validProducts } = await filterArticlesWithAi(articles);
 
-    if (autoImportDirectly) {
-      for (const article of validProducts) {
-        onImportToInbox(convertArticleToProduct(article));
+      if (autoImportDirectly) {
+        for (const article of validProducts) {
+          onImportToInbox(convertArticleToProduct(article));
+        }
+        setRssMessage(`⚡ Gemini AI 검증된 ${validProducts.length}개의 뉴스가 DB Inbox에 수집되었습니다.`);
+      } else {
+        onAddNewsArticles(validProducts);
+        setRssMessage(`Gemini AI 검증된 ${validProducts.length}개의 뉴스를 수집했습니다.`);
       }
-      setRssMessage(`⚡ AI 검증된 ${validProducts.length}개의 뉴스가 DB Inbox에 수집되었습니다.`);
-    } else {
-      onAddNewsArticles(validProducts);
-      setRssMessage(`AI 검증된 ${validProducts.length}개의 뉴스를 수집했습니다.`);
+    } catch (e) {
+      checkAiKeyOrPrompt();
     }
+
     setIsFetchingRss(false);
     setCustomRssUrl('');
     setTimeout(() => setRssMessage(null), 3500);
-  };
-
-  const handleTestSingleSiteFeed = async () => {
-    setIsFetchingRss(true);
-    setRssMessage('🧪 FashionNetwork FR 원본 피드 파싱 및 AI 실시간 검증 중...');
-    const result = await fetchSingleSiteFullRss('https://fr.fashionnetwork.com/rss/feed/fr,0.xml');
-
-    if (result.articles.length > 0) {
-      const { validProducts } = await filterArticlesWithAi(result.articles);
-      onAddNewsArticles(validProducts);
-      setRssMessage(`✅ FashionNetwork 파싱 성공! AI가 무관 기사를 제외하고 구매대행 실물 제품 ${validProducts.length}건만 수집했습니다.`);
-    } else {
-      setRssMessage('⚠️ FashionNetwork XML 파싱 실패: 네트워크 상태를 확인하세요.');
-    }
-
-    setIsFetchingRss(false);
-    setTimeout(() => setRssMessage(null), 5000);
   };
 
   const mediaList = [
@@ -291,9 +309,38 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     ? newsList
     : newsList.filter(n => n.category === selectedCategoryFilter);
 
+  const hasApiKey = hasValidAiApiKey();
+
   return (
     <div className="collector-container">
-      {/* Top Banner: Full Automation Bot Launcher with Direct AI Gatekeeper */}
+      {/* API Key Status Notice Box */}
+      {!hasApiKey && (
+        <div className="card shadow-md mb-4" style={{ background: '#fff1f2', border: '2px solid #fecdd3', padding: '16px' }}>
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <div style={{ background: '#f43f5e', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+                <Key size={22} color="#ffffff" />
+              </div>
+              <div>
+                <strong style={{ color: '#9f1239', fontSize: '1rem' }}>⚠️ [Gemini API Key 미등록 상태] Zero-Key 엔진 폐지됨</strong>
+                <p style={{ color: '#be123c', fontSize: '0.85rem', margin: '2px 0 0 0' }}>
+                  어설픈 Zero-Key 엔진이 100% 삭제되었습니다! 상단 설정에서 <strong>Gemini API Key를 1개 이상 등록하셔야 수집 작업이 가능</strong>합니다.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenSettingsModal}
+              className="btn-primary"
+              style={{ background: '#e11d48', border: 'none', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700 }}
+            >
+              <span>🔑 Gemini API Key 7개 멀티 등록하기</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Top Banner: Full Automation Bot Launcher */}
       <div className="card shadow-md mb-4" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: '#ffffff', border: '1px solid #4338ca' }}>
         <div className="card-header space-between" style={{ borderBottom: 'none', paddingBottom: '0' }}>
           <div className="flex items-center gap-3">
@@ -301,9 +348,9 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               <Bot size={28} color="#ffffff" />
             </div>
             <div>
-              <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [AI 실시간 필터 수집 엔진] 기본 수집 시 AI가 무관 기사 100% 차단</h3>
+              <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [Gemini LLM API 전용 엔진] 수집 시점 AI 실시간 통과 검증</h3>
               <p style={{ color: '#c7d2fe', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                수집 클릭 즉시 AI가 B2B/M&A/세무조사 기사를 실시간 걸러내고 파리 구매대행 실물 신제품만 등록합니다.
+                Gemini API Key 필수 적용 ➔ 수집과 동시에 B2B/M&A/세무조사 기사 100% 실시간 자동 차단
               </p>
             </div>
           </div>
@@ -316,7 +363,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', border: 'none', padding: '12px 20px', fontSize: '0.95rem', fontWeight: 700, borderRadius: '8px', boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)' }}
             >
               <Sparkles size={18} className={isAiCrawling ? 'spin' : ''} />
-              <span>{isAiCrawling ? '🤖 AI가 무관 기사 차단하며 수집 중...' : '🚀 AI 100% 실물 신제품 자동 수집'}</span>
+              <span>{isAiCrawling ? '🤖 Gemini LLM 실시간 검증 수집 중...' : '🚀 Gemini API 100% 실물 신제품 자동 수집'}</span>
             </button>
           </div>
         </div>
@@ -441,8 +488,8 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="header-with-badge">
             <div className="icon-wrapper rose"><Bookmark size={20} /></div>
             <div>
-              <h3>실시간 파리 속보 뉴스 & AI 수집 시점 자동 검증 엔진</h3>
-              <p className="text-muted">수집 클릭 즉시 AI가 무관 기사 100% 차단 ➔ 파리 신제품만 DB Inbox 직행</p>
+              <h3>실시간 파리 속보 뉴스 & Gemini LLM API 수집 엔진</h3>
+              <p className="text-muted">Gemini API Key 필수 ➔ 무관 기사 실시간 차단 후 실물 신제품만 DB Inbox 직행</p>
             </div>
           </div>
 
@@ -481,7 +528,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <RefreshCw size={16} className={isFetchingRss ? 'spin' : ''} />
-              <span>{isFetchingRss ? 'AI 실시간 수집 중...' : '전체 RSS 파싱 & AI 수집'}</span>
+              <span>{isFetchingRss ? 'Gemini AI 실시간 수집 중...' : '전체 RSS 파싱 & Gemini AI 수집'}</span>
             </button>
           </div>
         </div>
@@ -489,7 +536,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         {/* Live RSS Preset Source Toolbar */}
         <div className="rss-toolbar mb-4" style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--accent-gold)' }}>
-            📡 실시간 파리 매체 RSS 선택 수집 (AI 실시간 게이트키퍼 적용):
+            📡 실시간 파리 매체 RSS 선택 수집 (Gemini API 필수):
           </div>
           <div className="flex flex-wrap gap-2 mb-3">
             {PRESET_RSS_SOURCES.map((source) => (
@@ -554,7 +601,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <Bookmark size={36} className="text-muted mb-2" style={{ opacity: 0.5 }} />
             <h4 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>현재 선택된 카테고리의 수집 목록이 0건으로 비워져 있습니다.</h4>
             <p className="text-muted" style={{ fontSize: '0.9rem' }}>
-              상단의 <strong>[🚀 AI 100% 실물 신제품 자동 수집]</strong> 버튼을 누르시면 수집 클릭 즉시 AI가 무관 기사를 걸러내고 신제품만 등록합니다!
+              Gemini API Key 등록 후 상단의 <strong>[🚀 Gemini API 100% 실물 신제품 자동 수집]</strong> 버튼을 누르시면 Gemini AI가 검증한 파리 신제품만 수집됩니다!
             </p>
           </div>
         ) : (
@@ -600,10 +647,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                     <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
                       <div className="flex items-center gap-2" style={{ color: '#065f46', fontWeight: 700, fontSize: '0.9rem' }}>
                         <ShoppingBag size={18} />
-                        <span>🇰🇷 AI 구매대행 심층 적합도: <strong>{deepBuying.scorePercent}%</strong> ({deepBuying.badgeText})</span>
+                        <span>🇰🇷 Gemini LLM 심층 적합도: <strong>{deepBuying.scorePercent}%</strong> ({deepBuying.badgeText})</span>
                       </div>
                       <span style={{ fontSize: '0.75rem', background: '#059669', color: '#ffffff', padding: '3px 10px', borderRadius: '12px', fontWeight: 600 }}>
-                        🛡️ 수집 시점 AI 통과 검증 완료
+                        🛡️ Gemini AI 검증 100% 완료
                       </span>
                     </div>
 
