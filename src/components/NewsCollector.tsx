@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu } from 'lucide-react';
-import { calculateImportanceScore } from '../utils/scoreCalculator';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu, ShoppingBag, TrendingUp, DollarSign } from 'lucide-react';
+import { calculateImportanceScore, calculateBuyingAgencySuitability } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
 import { runAiWebCrawler } from '../utils/aiCrawlerService';
 import { runSnsAutoCrawler } from '../utils/snsAutoCrawler';
@@ -40,6 +40,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       isTrustedMedia: true,
     };
     const { score, level } = calculateImportanceScore(initialDetails);
+    const buyingInfo = calculateBuyingAgencySuitability(article);
 
     return {
       collectedAt: today,
@@ -50,15 +51,15 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       launchDate: '일정 확인 필요',
       location: article.suggestedLocation || '파리 매장/팝업',
       price: article.suggestedPrice || '가격 확인 필요',
-      keyFeatures: article.snippet,
-      targetAudience: '파리 현지 소비자 & 직구족',
+      keyFeatures: `${article.snippet}\n\n🇰🇷 [한국 구매대행 분석]: 적합도 ${buyingInfo.scorePercent}% (${buyingInfo.badgeText}) | ${buyingInfo.targetMargin}\n- ${buyingInfo.reasons.join('\n- ')}`,
+      targetAudience: '파리 현지 소비자 & 한국 직구족/구매대행',
       sourceUrl: article.url,
       sourceName: article.source,
       reliability: '언론 보도 / AI 탐색',
       importance: level,
       importanceScore: score,
       scoreDetails: initialDetails,
-      followUp: '공식 보도자료 및 추가 이미지 수집 필요',
+      followUp: `구매대행 적합도 ${buyingInfo.scorePercent}% - 공식 이미지 수집 및 마진 계산 필요`,
       naverStatus: '대기',
       instaStatus: '대기',
       imagePrepared: false,
@@ -102,7 +103,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       }
     }
     onAddNewsArticles(allCollected);
-    setRssMessage(`🚀 [완전 자동화 수집 완료] AI 크롤러 + SNS 트렌드 + RSS 3중 엔진으로 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
+    setRssMessage(`🚀 [완전 자동화 수집 완료] 한국 구매대행 적합도 분석 포함 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
 
     setIsAiCrawling(false);
     setIsFetchingRss(false);
@@ -296,7 +297,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <div>
               <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [Full Automation Bot] 1, 3, 4번 통합 완전 자동화 수집 봇</h3>
               <p style={{ color: '#c7d2fe', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                ① AI Web Crawler (Jina AI) + ③ Web Scraper Relay + ④ SNS Auto Crawler (Insta/TikTok) 3중 자동 파이프라인
+                ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler + 🇰🇷 한국 구매대행 적합도 자동 분석
               </p>
             </div>
           </div>
@@ -565,77 +566,102 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           </div>
         ) : (
           <div className="news-feed-list">
-            {filteredNews.map((article) => (
-              <div key={article.id} className="news-item-card" style={{ position: 'relative' }}>
-                {/* Delete Button for Individual Article */}
-                <button
-                  onClick={() => onRemoveNews(article.id)}
-                  title="이 기사 삭제"
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#ef4444',
-                    borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'content',
-                    cursor: 'pointer',
-                    zIndex: 2,
-                  }}
-                >
-                  <X size={14} />
-                </button>
+            {filteredNews.map((article) => {
+              const buyingInfo = calculateBuyingAgencySuitability(article);
 
-                <div className="news-meta" style={{ paddingRight: '28px' }}>
-                  <span className="badge-cat">{article.category}</span>
-                  <span className="source-tag">{article.source}</span>
-                  <span className="date-tag">{article.publishedAt}</span>
-                </div>
-
-                <h4 className="news-title">{article.title}</h4>
-                <p className="news-snippet">{article.snippet}</p>
-
-                <div className="parsed-preview-box">
-                  <div className="preview-pill">
-                    <strong>추출 브랜드:</strong> {article.suggestedBrand}
-                  </div>
-                  <div className="preview-pill">
-                    <strong>추출 제품:</strong> {article.suggestedProduct}
-                  </div>
-                  <div className="preview-pill">
-                    <strong>장소:</strong> {article.suggestedLocation}
-                  </div>
-                  <div className="preview-pill">
-                    <strong>예상가격:</strong> {article.suggestedPrice}
-                  </div>
-                </div>
-
-                <div className="news-card-actions">
-                  <a 
-                    href={article.url} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="btn-outline btn-xs"
+              return (
+                <div key={article.id} className="news-item-card" style={{ position: 'relative' }}>
+                  {/* Delete Button for Individual Article */}
+                  <button
+                    onClick={() => onRemoveNews(article.id)}
+                    title="이 기사 삭제"
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      color: '#ef4444',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'content',
+                      cursor: 'pointer',
+                      zIndex: 2,
+                    }}
                   >
-                    <span>원문 읽기</span>
-                    <ExternalLink size={14} />
-                  </a>
-
-                  <button 
-                    className="btn-primary btn-sm"
-                    onClick={() => handleQuickImport(article)}
-                  >
-                    <PlusCircle size={14} />
-                    <span>DB Inbox에 1-Click 추가</span>
+                    <X size={14} />
                   </button>
+
+                  <div className="news-meta" style={{ paddingRight: '28px' }}>
+                    <span className="badge-cat">{article.category}</span>
+                    <span className="source-tag">{article.source}</span>
+                    <span className="date-tag">{article.publishedAt}</span>
+                  </div>
+
+                  <h4 className="news-title">{article.title}</h4>
+                  <p className="news-snippet">{article.snippet}</p>
+
+                  {/* 🇰🇷 Korea Buying Agency Suitability Analysis Box */}
+                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px' }}>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2" style={{ color: '#047857', fontWeight: 700, fontSize: '0.85rem' }}>
+                        <ShoppingBag size={16} />
+                        <span>🇰🇷 파리 구매대행 적합도: <strong>{buyingInfo.scorePercent}%</strong> ({buyingInfo.badgeText})</span>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', background: '#10b981', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                        {buyingInfo.targetMargin}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {buyingInfo.reasons.map((r, rIdx) => (
+                        <span key={rIdx} style={{ fontSize: '0.75rem', background: '#ffffff', color: '#065f46', border: '1px solid #a7f3d0', padding: '3px 8px', borderRadius: '4px', fontWeight: 500 }}>
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="parsed-preview-box">
+                    <div className="preview-pill">
+                      <strong>추출 브랜드:</strong> {article.suggestedBrand}
+                    </div>
+                    <div className="preview-pill">
+                      <strong>추출 제품:</strong> {article.suggestedProduct}
+                    </div>
+                    <div className="preview-pill">
+                      <strong>장소:</strong> {article.suggestedLocation}
+                    </div>
+                    <div className="preview-pill">
+                      <strong>예상가격:</strong> {article.suggestedPrice}
+                    </div>
+                  </div>
+
+                  <div className="news-card-actions">
+                    <a 
+                      href={article.url} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="btn-outline btn-xs"
+                    >
+                      <span>원문 읽기</span>
+                      <ExternalLink size={14} />
+                    </a>
+
+                    <button 
+                      className="btn-primary btn-sm"
+                      onClick={() => handleQuickImport(article)}
+                    >
+                      <PlusCircle size={14} />
+                      <span>DB Inbox에 1-Click 추가 (적합도 포함)</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
