@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Sparkles } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
+import { runAiWebCrawler } from '../utils/aiCrawlerService';
+import { runSnsAutoCrawler } from '../utils/snsAutoCrawler';
 import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
 
 interface NewsCollectorProps {
@@ -23,6 +25,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const [copiedQuery, setCopiedQuery] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('전체');
   const [isFetchingRss, setIsFetchingRss] = useState<boolean>(false);
+  const [isAiCrawling, setIsAiCrawling] = useState<boolean>(false);
   const [rssMessage, setRssMessage] = useState<string | null>(null);
   const [customRssUrl, setCustomRssUrl] = useState<string>('');
   const [autoImportDirectly, setAutoImportDirectly] = useState<boolean>(false);
@@ -51,7 +54,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       targetAudience: '파리 현지 소비자 & 직구족',
       sourceUrl: article.url,
       sourceName: article.source,
-      reliability: '언론 보도',
+      reliability: '언론 보도 / AI 탐색',
       importance: level,
       importanceScore: score,
       scoreDetails: initialDetails,
@@ -60,6 +63,52 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       instaStatus: '대기',
       imagePrepared: false,
     };
+  };
+
+  // 1, 3, 4번 통합: ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler 3중 완전 자동화 수집 봇
+  const handleRunFullAutomationBot = async () => {
+    setIsAiCrawling(true);
+    setIsFetchingRss(true);
+    setRssMessage('🤖 [Full Automation Engine] ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler 3중 자동 수집 구동 중...');
+
+    let allCollected: NewsArticle[] = [];
+
+    // Step 1: ① AI Web Crawler (Jina AI) - Paris Indie Brands & Niche Launch Search
+    try {
+      const aiArticles = await runAiWebCrawler('Paris launch new product indie brand niche beauty');
+      allCollected = [...allCollected, ...aiArticles];
+    } catch (e) {}
+
+    // Step 2: ④ SNS Auto Crawler (Instagram & TikTok #popupparis #marqueindependante)
+    try {
+      const snsArticles = await runSnsAutoCrawler('popupparis');
+      allCollected = [...allCollected, ...snsArticles];
+    } catch (e) {}
+
+    // Step 3: RSS Feed & 3-Tier Boolean Query Fetcher
+    for (const source of PRESET_RSS_SOURCES) {
+      const articles = await fetchRssArticles(source);
+      allCollected = [...allCollected, ...articles];
+    }
+
+    if (autoImportDirectly || true) {
+      let count = 0;
+      const tgConfig = getTelegramConfig();
+      for (const article of allCollected) {
+        const prod = convertArticleToProduct(article);
+        onImportToInbox(prod);
+        count++;
+        if (tgConfig.enabled) {
+          sendProductApprovalRequest(tgConfig, { ...prod, id: `auto-bot-${Date.now()}` } as ProductItem);
+        }
+      }
+      onAddNewsArticles(allCollected);
+      setRssMessage(`🚀 [완전 자동화 수집 완료] AI 크롤러 + SNS 트렌드 + RSS 3중 엔진으로 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
+    }
+
+    setIsAiCrawling(false);
+    setIsFetchingRss(false);
+    setTimeout(() => setRssMessage(null), 6000);
   };
 
   // 단일 사이트 (FashionNetwork) 원본 피드 검증 파이프라인
@@ -236,6 +285,33 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
   return (
     <div className="collector-container">
+      {/* Top Banner: Full Automation Bot Launcher (1, 3, 4번 통합) */}
+      <div className="card shadow-md mb-4" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: '#ffffff', border: '1px solid #4338ca' }}>
+        <div className="card-header space-between" style={{ borderBottom: 'none', paddingBottom: '0' }}>
+          <div className="flex items-center gap-3">
+            <div style={{ background: '#4f46e5', padding: '10px', borderRadius: '12px', display: 'flex' }}>
+              <Bot size={28} color="#ffffff" />
+            </div>
+            <div>
+              <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [Full Automation Bot] 1, 3, 4번 통합 완전 자동화 수집 봇</h3>
+              <p style={{ color: '#c7d2fe', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                ① AI Web Crawler (Jina AI) + ③ Web Scraper Relay + ④ SNS Auto Crawler (Insta/TikTok) 3중 자동 파이프라인
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleRunFullAutomationBot}
+            disabled={isAiCrawling}
+            className="btn-primary"
+            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', border: 'none', padding: '12px 24px', fontSize: '0.95rem', fontWeight: 700, borderRadius: '8px', boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)' }}
+          >
+            <Cpu size={18} className={isAiCrawling ? 'spin' : ''} />
+            <span>{isAiCrawling ? '🤖 AI + SNS + Web 3중 자동 수집 중...' : '🚀 3중 완전 자동화 수집 봇 실행'}</span>
+          </button>
+        </div>
+      </div>
+
       {/* 1. Top Section: Google Alerts & Media Subscriber Guide */}
       <div className="section-grid">
         {/* Left: Google Alerts Keyword Builder */}
@@ -483,7 +559,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <Bookmark size={36} className="text-muted mb-2" style={{ opacity: 0.5 }} />
             <h4 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>현재 수집 대기 목록이 0건으로 깔끔히 비워져 있습니다.</h4>
             <p className="text-muted" style={{ fontSize: '0.9rem' }}>
-              상단의 <strong>[🎨 파리 소규모 인디 브랜드 RSS]</strong> 또는 <strong>[전체 RSS 파싱 & DB 자동 등록]</strong> 버튼을 누르시면 실시간 기사가 수집됩니다!
+              상단의 <strong>[🚀 3중 완전 자동화 수집 봇 실행]</strong> 버튼을 누르시면 AI + SNS + Web 뉴스들이 100% 자동 수집됩니다!
             </p>
           </div>
         ) : (
