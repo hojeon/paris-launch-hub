@@ -39,7 +39,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
   {
     id: 'rss-lefigaro-eco',
-    name: 'Le Figaro Économie (테크/비즈니스)',
+    name: 'Le Figaro Économie (테크/비즈니스 신제품)',
     url: 'https://www.lefigaro.fr/rss/figaro_economie.xml',
     siteUrl: 'https://www.lefigaro.fr/economie',
     category: '테크',
@@ -66,6 +66,22 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
 ];
 
+// 🚫 무관한 정치/정부/연료/세금/전쟁/사회 이슈 차단 키워드 리스트
+export const NOISE_EXCLUSION_KEYWORDS = [
+  'carburant', 'indemnité', 'guerre', 'gouvernement', 'impôt', 'taxe', 'retraite',
+  'politique', 'grève', 'macron', 'bourse', 'immobilier', 'inflation', 'gazole',
+  'essence', 'moyen-orient', 'russie', 'ukraine', 'président', 'assemblée', 'député',
+  '보조금', '연료', '정치', '정부', '세금', '연금', '파업', '전쟁', '마크롱', '부동산', '증시'
+];
+
+/**
+ * Checks if article content contains noise keywords (politics, fuel, government, taxes)
+ */
+export function isNoiseArticle(title: string, snippet: string = ''): boolean {
+  const combined = (title + ' ' + snippet).toLowerCase();
+  return NOISE_EXCLUSION_KEYWORDS.some(kw => combined.includes(kw.toLowerCase()));
+}
+
 /**
  * Genuine Live XML RSS/Atom Fetcher Engine
  */
@@ -86,7 +102,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         try {
           const parsedJson = JSON.parse(text);
           if (parsedJson.items && Array.isArray(parsedJson.items)) {
-            return parsedJson.items;
+            return parsedJson.items.filter((i: any) => !isNoiseArticle(i.title || '', i.snippet || ''));
           }
         } catch (e) {}
       }
@@ -100,11 +116,13 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          return data.map((item: any, idx: number) => ({
-            ...item,
-            id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
-            category: normalizeCategory(item.category || feed.category),
-          }));
+          return data
+            .filter((item: any) => !isNoiseArticle(item.title || '', item.snippet || ''))
+            .map((item: any, idx: number) => ({
+              ...item,
+              id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+              category: normalizeCategory(item.category || feed.category),
+            }));
         }
       }
     } catch (e) {}
@@ -202,7 +220,18 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
 
       if (!title || title === '제목 없음') return;
 
-      // 2. Extract Link
+      // 2. Extract Description / Snippet
+      const descNode = node.querySelector('description') || node.querySelector('summary') || node.querySelector('content');
+      let description = descNode ? (descNode.textContent || '').trim() : '';
+      description = stripHtmlTags(description);
+
+      // 🚫 Filter out noise articles (politics, fuel subsidies, wars)
+      if (isNoiseArticle(title, description)) {
+        console.warn(`[RSS Engine Filtered Noise]: ${title}`);
+        return;
+      }
+
+      // 3. Extract Link
       let link = '';
       const linkNode = node.querySelector('link');
       if (linkNode) {
@@ -215,11 +244,6 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
       if (!link || !link.startsWith('http')) {
         link = feed.siteUrl || feed.url || 'https://news.google.com';
       }
-
-      // 3. Extract Description / Snippet
-      const descNode = node.querySelector('description') || node.querySelector('summary') || node.querySelector('content');
-      let description = descNode ? (descNode.textContent || '').trim() : '';
-      description = stripHtmlTags(description);
 
       const snippet = description.length > 0
         ? description.slice(0, 220) + (description.length > 220 ? '...' : '')
@@ -279,11 +303,14 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
     const title = titleMatch ? stripHtmlTags(titleMatch[1]).trim() : '';
     if (!title) return;
 
+    const desc = descMatch ? stripHtmlTags(descMatch[2] || descMatch[1]).trim() : '';
+
+    if (isNoiseArticle(title, desc)) return;
+
     let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : 'https://news.google.com';
     link = stripHtmlTags(link);
     if (!link.startsWith('http')) link = 'https://news.google.com';
 
-    const desc = descMatch ? stripHtmlTags(descMatch[2] || descMatch[1]).trim() : '';
     const snippet = desc.length > 0 ? desc.slice(0, 220) + '...' : title;
 
     let formattedDate = new Date().toISOString().split('T')[0];
