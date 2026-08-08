@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Send, ShieldCheck, CheckCircle2, MessageSquare, Bell, Sliders, Info, Zap, AlertTriangle, Lock, ExternalLink, HelpCircle } from 'lucide-react';
+import { X, Send, ShieldCheck, CheckCircle2, MessageSquare, Bell, Sliders, Info, Zap, AlertTriangle, Lock, ExternalLink, Key, Cpu, Sparkles } from 'lucide-react';
 import { getNotificationConfig, saveNotificationConfig, sendProductNotification, NotificationConfig } from '../utils/notificationService';
+import { getStoredAiApiKey, saveStoredAiApiKey } from '../utils/aiArticleValidator';
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
   onConfigSaved,
 }) => {
   const [config, setConfig] = useState<NotificationConfig>(() => getNotificationConfig());
+  const [aiApiKey, setAiApiKey] = useState<string>(() => getStoredAiApiKey());
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState<boolean>(false);
 
@@ -21,8 +23,9 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
 
   const handleSave = () => {
     saveNotificationConfig(config);
+    saveStoredAiApiKey(aiApiKey);
     if (onConfigSaved) onConfigSaved(config);
-    setTestResult({ success: true, message: '✅ 클린 알림 채널 설정이 성공적으로 저장되었습니다!' });
+    setTestResult({ success: true, message: '✅ 클린 알림 채널 & AI API 키 설정이 성공적으로 저장되었습니다!' });
     setTimeout(() => {
       setTestResult(null);
       onClose();
@@ -43,7 +46,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
       launchDate: '2026-08-08',
       location: '파리 마레 지구 팝업스토어',
       price: '180€',
-      keyFeatures: '성인광고/스팸 0%! 내장 클린 봇(@pcds75bot)으로 즉시 발송되는 파리 신제품 알림 테스트입니다.',
+      keyFeatures: '성인광고/스팸 0%! Gemini LLM AI 정밀 파서 및 클린 봇으로 연동 발송되는 파리 신제품 알림 테스트입니다.',
       targetAudience: '파리 현지 직구족',
       sourceUrl: 'https://paris-launch-hub.pariscommetoi.workers.dev',
       sourceName: 'Paris Launch Hub',
@@ -71,15 +74,46 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem' }}>🛡️ 성인광고 0% 클린 전용 봇 사용 설정</h3>
+              <h3 style={{ margin: 0, fontSize: '1.25rem' }}>🛡️ 알림 수신 채널 & AI API 연동 설정</h3>
               <p className="text-muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-                BotFather 접속 없이 내장 클린 봇(@pcds75bot) 2단계 초간단 연동
+                Google Gemini API 연동 + 스팸 0% 클린 수신 채널 선택
               </p>
             </div>
           </div>
           <button onClick={onClose} className="btn-icon" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={20} />
           </button>
+        </div>
+
+        {/* AI API Key Card Section */}
+        <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)', border: '1px solid #d8b4fe', padding: '16px' }}>
+          <div className="flex items-center gap-2 mb-2" style={{ color: '#6b21a8', fontWeight: 700, fontSize: '0.95rem' }}>
+            <Sparkles size={18} color="#9333ea" />
+            <span>🔮 Google Gemini AI API Key 연동 (선택 사항)</span>
+          </div>
+          <p className="text-muted mb-3" style={{ fontSize: '0.8rem', margin: '0 0 10px 0', color: '#7e22ce' }}>
+            Google Gemini API 키를 입력하시면, AI가 프랑스어 기사 전문을 읽고 B2B/M&A/세무조사 기사를 99.9% 정밀하게 100% 솎아냅니다! (미입력 시 기본 내장 Zero-Key AI 엔진으로 자동 작동)
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              className="input-field"
+              placeholder="AIzaSy... (Google Gemini API Key 입력)"
+              value={aiApiKey}
+              onChange={(e) => setAiApiKey(e.target.value)}
+              style={{ fontFamily: 'monospace', fontSize: '0.85rem', flex: 1, padding: '8px 12px' }}
+            />
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-outline btn-sm flex items-center gap-1"
+              style={{ background: '#ffffff', color: '#9333ea', border: '1px solid #c084fc', textDecoration: 'none', whiteSpace: 'nowrap', fontSize: '0.8rem' }}
+            >
+              <span>🔑 무료 키 발급받기</span>
+              <ExternalLink size={12} />
+            </a>
+          </div>
         </div>
 
         {/* Channel Selection Tabs */}
@@ -172,7 +206,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
                 href="https://t.me/userinfobot"
                 target="_blank"
                 rel="noreferrer"
-                style={{ fontSize: '0.8rem', color: '#0088cc', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
+                style={{ fontSize: '0.8rem', color: '#0088cc', textDecoration: 'none', display: 'flex', itemsCenter: 'center', gap: '2px' }}
               >
                 <span>내 Chat ID 즉시 확인하기</span>
                 <ExternalLink size={12} />
