@@ -75,6 +75,7 @@ export const App: React.FC = () => {
 
   const handleClearNewsList = () => {
     setNewsList([]);
+    localStorage.removeItem('paris_news');
     localStorage.setItem('paris_news', JSON.stringify([]));
   };
 

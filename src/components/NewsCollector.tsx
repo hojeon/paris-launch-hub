@@ -453,13 +453,13 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               <span>🧪 FashionNetwork 원본 피드 100% 파싱 테스트</span>
             </button>
 
-            {/* Clear All List Button */}
-            {onClearNewsList && newsList.length > 0 && (
+            {/* Always Visible Reset & Clear All Button */}
+            {onClearNewsList && (
               <button
                 className="btn-outline btn-sm"
                 onClick={onClearNewsList}
-                title="이전 대기 수집 목록 100% 전체 비우기"
-                style={{ color: 'var(--accent-rose)', border: '1px solid var(--accent-rose)', fontWeight: 600 }}
+                title="수집 대기 목록 및 잔여 카드 100% 강제 리셋 비우기"
+                style={{ color: 'var(--accent-rose)', border: '1px solid var(--accent-rose)', fontWeight: 600, background: '#fff1f2' }}
               >
                 <Trash2 size={14} />
                 <span>수집 목록 전체 비우기 ({newsList.length}건)</span>
@@ -552,16 +552,16 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             ))}
           </div>
           <span className="text-muted" style={{ fontSize: '0.85rem' }}>
-            수집 대기 기사: <strong>{filteredNews.length}</strong>건
+            수집 대기 기사: <strong>{filteredNews.length}</strong>건 (전체 <strong>{newsList.length}</strong>건)
           </span>
         </div>
 
         {filteredNews.length === 0 ? (
           <div className="empty-state" style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '2px dashed var(--border-color)' }}>
             <Bookmark size={36} className="text-muted mb-2" style={{ opacity: 0.5 }} />
-            <h4 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>현재 수집 대기 목록이 0건으로 깔끔히 비워져 있습니다.</h4>
+            <h4 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>현재 선택된 카테고리의 수집 목록이 0건으로 비워져 있습니다.</h4>
             <p className="text-muted" style={{ fontSize: '0.9rem' }}>
-              상단의 <strong>[🚀 3중 완전 자동화 수집 봇 실행]</strong> 버튼을 누르시면 AI + SNS + Web 뉴스들이 100% 자동 수집됩니다!
+              상단의 <strong>[🚀 3중 완전 자동화 수집 봇 실행]</strong> 또는 <strong>[전체 RSS 파싱]</strong> 버튼을 누르시면 최신 속보가 자동 수집됩니다!
             </p>
           </div>
         ) : (
