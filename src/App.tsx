@@ -17,7 +17,7 @@ export const App: React.FC = () => {
 
   const [telegramConfig, setTelegramConfig] = useState<TelegramConfig>(() => getTelegramConfig());
 
-  // LocalStorage State Initialization with Fallback Guarantee
+  // LocalStorage State Initialization with Always-On Seed Guarantee
   const [products, setProducts] = useState<ProductItem[]>(() => {
     const saved = localStorage.getItem('paris_products');
     if (saved) {
@@ -42,6 +42,13 @@ export const App: React.FC = () => {
 
   const [selectedProductForContent, setSelectedProductForContent] = useState<ProductItem | null>(null);
 
+  // Guarantee non-empty newsList on mount
+  useEffect(() => {
+    if (!newsList || newsList.length === 0) {
+      setNewsList(INITIAL_NEWS);
+    }
+  }, [newsList]);
+
   useEffect(() => {
     localStorage.setItem('paris_products', JSON.stringify(products));
   }, [products]);
@@ -60,17 +67,21 @@ export const App: React.FC = () => {
   };
 
   const handleRemoveNews = (newsId: string) => {
-    setNewsList((prev) => prev.filter((n) => n.id !== newsId));
+    setNewsList((prev) => {
+      const next = prev.filter((n) => n.id !== newsId);
+      return next.length > 0 ? next : INITIAL_NEWS;
+    });
   };
 
   const handleAddNewsArticles = (newArticles: NewsArticle[]) => {
-    setNewsList((prev) => [...newArticles, ...prev]);
+    setNewsList((prev) => {
+      const combined = [...newArticles, ...prev];
+      return combined.length > 0 ? combined : INITIAL_NEWS;
+    });
   };
 
   const handleClearNewsList = () => {
-    if (confirm('수집 대기 목록을 모두 비우시겠습니까?')) {
-      setNewsList(INITIAL_NEWS);
-    }
+    setNewsList(INITIAL_NEWS);
   };
 
   const handleUpdateProduct = (updated: ProductItem) => {
@@ -120,7 +131,7 @@ export const App: React.FC = () => {
       <main className="main-content">
         {activeTab === 'collector' && (
           <NewsCollector
-            newsList={newsList}
+            newsList={newsList.length > 0 ? newsList : INITIAL_NEWS}
             onImportToInbox={handleImportToInbox}
             onRemoveNews={handleRemoveNews}
             onAddNewsArticles={handleAddNewsArticles}
