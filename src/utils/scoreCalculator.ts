@@ -22,7 +22,7 @@ export function calculateImportanceScore(details: ScoreDetails): { score: number
 export interface DeepBuyingAgencyAnalysis {
   scorePercent: number;           // 0 ~ 100%
   badgeText: string;              // e.g. "🔥 [초고수익 현지 바잉 대박]"
-  priceArbitrage: string;         // e.g. "한국 매장가 대비 ~35% 가격 차익 (TVA 12% 환급)"
+  priceArbitrage: string;         // e.g. "택스프리 0% 전제 순수 마진"
   volumetricRisk: '안전 (소형/가벼움)' | '주의 (부피무게 발생)' | '위험 (오버사이즈)'; 
   sourcingDifficulty: '온라인 직구 가능' | '파리 현지 바잉 필수 (구매제한)' | '팝업스토어 현장 대기';
   customsCheck: string;           // e.g. "목록통관 무관세 (150불 이하)"
@@ -31,7 +31,7 @@ export interface DeepBuyingAgencyAnalysis {
 }
 
 /**
- * Real-world Expert Buying Agency Assessment Engine (7 Deep Factors)
+ * Real-world Conservative Buying Agency Engine (NO TAX REFUND / Tax Refund = 0%)
  */
 export function calculateDeepBuyingAgencySuitability(article: Partial<NewsArticle>): DeepBuyingAgencyAnalysis {
   let score = 55;
@@ -40,27 +40,27 @@ export function calculateDeepBuyingAgencySuitability(article: Partial<NewsArticl
   const text = ((article.title || '') + ' ' + (article.snippet || '') + ' ' + (article.suggestedPrice || '')).toLowerCase();
   const category = article.category || '패션';
 
-  // 1. Price Arbitrage & Tax Refund (유로 환율 & TVA 12~20% 실체)
+  // 1. Conservative Price Arbitrage (Tax Refund = 0% Base)
   const priceMatch = (article.suggestedPrice || '').match(/\d+/);
   const numericPrice = priceMatch ? parseInt(priceMatch[0], 10) : 0;
-  let priceArbitrage = '한국 매장가 대비 ~25% 가격 차익';
-  let customsCheck = '일반 수입 통관 대상';
+  let priceArbitrage = '택스프리 0% 전제 순수 마진율 ~25%';
+  let customsCheck = '일반 수입 통관 대상 (관부과세 발생)';
 
   if (numericPrice > 0 && numericPrice <= 135) {
-    score += 20;
+    score += 25;
     customsCheck = '⚡ 목록통관 무관세 대상 (150불 이하 / 관부과세 0원)';
-    priceArbitrage = '무관세 + 유로 직구 메리트 최고 (직구족 결제 전환 95%)';
-    reasons.push('💰 135€ 이하 목록통관 무관세 (관부과세 0원 / 가격 경쟁력 1위)');
-  } else if (numericPrice > 135 && numericPrice <= 350) {
-    score += 15;
-    customsCheck = '관부과세 과세 (FTA 원산지 증명 시 관세 면제 가능)';
-    priceArbitrage = '파리 현지 TVA 12% 택스리프리 환급으로 마진 30% 확보';
-    reasons.push('💶 프랑스 택스리프리(12%) 환급 마진 우수');
-  } else if (numericPrice > 350) {
+    priceArbitrage = '택스프리 없이도 무관세 135€ 이하 순수 마진 35%+ (최고의 구매대행 메리트)';
+    reasons.push('💰 택스프리 0원 기준 135€ 이하 목록통관 무관세 (관부과세 0원 / 순수 마진 1위)');
+  } else if (numericPrice > 135 && numericPrice <= 300) {
+    score += 12;
+    customsCheck = '관부과세 발생 (약 18~25% 세금 반영 후 마진 수립)';
+    priceArbitrage = '택스프리 0% 적용 후 파리 현지 정가 대비 보수적 마진 20%~30%';
+    reasons.push('🏷️ 택스프리 미반영 기준 보수적 마진 확보 가능한 현지 정가');
+  } else if (numericPrice > 300) {
     score += 10;
     customsCheck = '고액 수입 통관 (개인통관고유부호 필수)';
-    priceArbitrage = '한국 정발가 대비 40~100만 원 가격 차익 (럭셔리 프리미엄)';
-    reasons.push('💎 한국 매장 정발가 대비 고액 가격 차익 수수료 수입');
+    priceArbitrage = '택스프리 0% 전제 한국 매장 정발가 대비 차익 수수료 수입';
+    reasons.push('💎 한국 매장 정발가/직구가 대비 순수 가격 차익 수수료 수입');
   }
 
   // 2. Volumetric Weight vs Freight Risk (부피무게 폭탄 방지)
@@ -84,7 +84,7 @@ export function calculateDeepBuyingAgencySuitability(article: Partial<NewsArticl
   if (text.includes('marais') || text.includes('마레') || text.includes('pop-up') || text.includes('popup') || text.includes('éphémère')) {
     score += 20;
     sourcingDifficulty = '팝업스토어 현장 대기';
-    reasons.push('📍 파리 현지 팝업스토어 대기 현장 바잉 (희소성 300% / 수수료 높음)');
+    reasons.push('📍 파리 현지 팝업스토어 대기 현장 바잉 (희소성 300% / 프리미엄 마진)');
   } else if (text.includes('sezane') || text.includes('rouje') || text.includes('polene') || text.includes('buly') || text.includes('dior')) {
     score += 15;
     sourcingDifficulty = '파리 현지 바잉 필수 (구매제한)';
@@ -92,7 +92,7 @@ export function calculateDeepBuyingAgencySuitability(article: Partial<NewsArticl
   }
 
   // 4. Korea Target Audience Psychographics (한국 세대별 직구 타겟)
-  let targetAudienceTag = '2030 파리 감성 여성 직구족';
+  let targetAudienceTag = '2030 파리 감성 직구족';
   if (category === '뷰티') {
     targetAudienceTag = '파리 약국 화장품 & 니치 퍼퓸 마니아';
   } else if (category === '식품') {
@@ -105,9 +105,9 @@ export function calculateDeepBuyingAgencySuitability(article: Partial<NewsArticl
 
   let badgeText = '👍 [안정적 수익 구매대행]';
   if (finalScore >= 85) {
-    badgeText = '🔥 [초고수익 현지 바잉 대박]';
+    badgeText = '🔥 [초고수익 현지 바잉 대박 (택스프리 0% 전제)]';
   } else if (finalScore >= 70) {
-    badgeText = '👍 [꾸준한 해외 직구 인기작]';
+    badgeText = '👍 [꾸준한 해외 직구 인기작 (택스프리 0% 전제)]';
   } else {
     badgeText = 'ℹ️ [일반 트렌드 수집작]';
   }

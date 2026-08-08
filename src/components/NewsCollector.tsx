@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu, ShoppingBag, TrendingUp, DollarSign, Package, AlertTriangle, Lock, Target } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu, ShoppingBag, TrendingUp, DollarSign, Package, AlertTriangle, Lock, Target, ShieldAlert } from 'lucide-react';
 import { calculateImportanceScore, calculateDeepBuyingAgencySuitability } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
 import { runAiWebCrawler } from '../utils/aiCrawlerService';
@@ -51,7 +51,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       launchDate: '일정 확인 필요',
       location: article.suggestedLocation || '파리 매장/팝업',
       price: article.suggestedPrice || '가격 확인 필요',
-      keyFeatures: `${article.snippet}\n\n🇰🇷 [실전 파리 구매대행 심층 리포트]:\n- 적합도: ${deepBuying.scorePercent}% (${deepBuying.badgeText})\n- 차익 분석: ${deepBuying.priceArbitrage}\n- 부피무게 평가: ${deepBuying.volumetricRisk}\n- 바잉 난이도: ${deepBuying.sourcingDifficulty}\n- 통관 규제: ${deepBuying.customsCheck}\n- 타겟층: ${deepBuying.targetAudienceTag}`,
+      keyFeatures: `${article.snippet}\n\n🇰🇷 [실전 파리 구매대행 심층 리포트 (택스프리 0% 전제)]:\n- 적합도: ${deepBuying.scorePercent}% (${deepBuying.badgeText})\n- 차익 분석: ${deepBuying.priceArbitrage}\n- 부피무게 평가: ${deepBuying.volumetricRisk}\n- 바잉 난이도: ${deepBuying.sourcingDifficulty}\n- 통관 규제: ${deepBuying.customsCheck}\n- 타겟층: ${deepBuying.targetAudienceTag}`,
       targetAudience: deepBuying.targetAudienceTag,
       sourceUrl: article.url,
       sourceName: article.source,
@@ -59,7 +59,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       importance: level,
       importanceScore: score,
       scoreDetails: initialDetails,
-      followUp: `구매대행 심층 적합도 ${deepBuying.scorePercent}% - ${deepBuying.sourcingDifficulty} 준비 필요`,
+      followUp: `구매대행 적합도 ${deepBuying.scorePercent}% (택스프리 0% 보수적) - ${deepBuying.sourcingDifficulty} 준비 필요`,
       naverStatus: '대기',
       instaStatus: '대기',
       imagePrepared: false,
@@ -103,7 +103,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       }
     }
     onAddNewsArticles(allCollected);
-    setRssMessage(`🚀 [완전 자동화 수집 완료] 실전 파리 구매대행 심층 7대 분석 포함 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
+    setRssMessage(`🚀 [완전 자동화 수집 완료] 택스프리 0% 보수적 기준 파리 구매대행 리포트 포함 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
 
     setIsAiCrawling(false);
     setIsFetchingRss(false);
@@ -297,7 +297,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <div>
               <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [Full Automation Bot] 1, 3, 4번 통합 완전 자동화 수집 봇</h3>
               <p style={{ color: '#c7d2fe', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler + 🇰🇷 실전 파리 구매대행 심층 7대 리포트 분석
+                ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler + 🛡️ 택스프리 미반영(0%) 보수적 순수 마진 분석
               </p>
             </div>
           </div>
@@ -604,16 +604,20 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                   <h4 className="news-title">{article.title}</h4>
                   <p className="news-snippet">{article.snippet}</p>
 
-                  {/* 🇰🇷 Real-World Buying Agency 7-Deep Factors Box */}
+                  {/* 🛡️ Real-World Buying Agency (Tax Refund = 0% Conservative Base) Box */}
                   <div style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', padding: '12px 14px', borderRadius: '10px', marginBottom: '12px' }}>
                     <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
                       <div className="flex items-center gap-2" style={{ color: '#065f46', fontWeight: 700, fontSize: '0.9rem' }}>
                         <ShoppingBag size={18} />
-                        <span>🇰🇷 실전 구매대행 심층 적합도: <strong>{deepBuying.scorePercent}%</strong> ({deepBuying.badgeText})</span>
+                        <span>🇰🇷 파리 구매대행 심층 적합도: <strong>{deepBuying.scorePercent}%</strong> ({deepBuying.badgeText})</span>
                       </div>
                       <span style={{ fontSize: '0.75rem', background: '#059669', color: '#ffffff', padding: '3px 10px', borderRadius: '12px', fontWeight: 600 }}>
-                        {deepBuying.priceArbitrage}
+                        🛡️ 택스프리 미반영(0%) 기준
                       </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 600, marginBottom: '8px', background: '#ecfdf5', padding: '4px 10px', borderRadius: '6px' }}>
+                      💶 차익 분석: {deepBuying.priceArbitrage}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 mb-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
