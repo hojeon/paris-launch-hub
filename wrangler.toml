@@ -1,6 +1,7 @@
 name = "paris-launch-hub"
 main = "src/worker.ts"
 compatibility_date = "2026-08-07"
+account_id = "00f4deacc83430ee9bc32a57dab31fee"
 
 [assets]
 directory = "./dist"
