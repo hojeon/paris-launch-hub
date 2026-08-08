@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
 import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
@@ -26,13 +26,6 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const [rssMessage, setRssMessage] = useState<string | null>(null);
   const [customRssUrl, setCustomRssUrl] = useState<string>('');
   const [autoImportDirectly, setAutoImportDirectly] = useState<boolean>(false);
-
-  // 마운트 시 뉴스 리스트가 0건이면 단일 사이트 원본 파싱 검증 자동 실행
-  useEffect(() => {
-    if (newsList.length === 0 && !isFetchingRss) {
-      handleTestSingleSiteFeed();
-    }
-  }, []);
 
   const convertArticleToProduct = (article: NewsArticle): Omit<ProductItem, 'id'> => {
     const today = new Date().toISOString().split('T')[0];
@@ -77,9 +70,9 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
     if (result.articles.length > 0) {
       onAddNewsArticles(result.articles);
-      setRssMessage(`✅ FashionNetwork XML (${Math.round(result.sourceXmlBytes / 1024)}KB) 파싱 성공! 검색어 필터 없이 총 ${result.articles.length}건의 원본 기사를 100% 가져왔습니다.`);
+      setRssMessage(`✅ FashionNetwork XML (${Math.round(result.sourceXmlBytes / 1024)}KB) 파싱 성공! ${result.articles.length}건의 원본 기사를 목록에 추가했습니다.`);
     } else {
-      setRssMessage('⚠️ FashionNetwork XML 파싱 실패: 네트워크 또는 프록시 상태를 디버깅 중입니다.');
+      setRssMessage('⚠️ FashionNetwork XML 파싱 실패: 네트워크 상태를 확인하세요.');
     }
 
     setIsFetchingRss(false);
@@ -372,11 +365,11 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               <button
                 className="btn-outline btn-sm"
                 onClick={onClearNewsList}
-                title="이전 대기 수집 목록 비우기"
-                style={{ color: 'var(--accent-rose)' }}
+                title="이전 대기 수집 목록 100% 전체 비우기"
+                style={{ color: 'var(--accent-rose)', border: '1px solid var(--accent-rose)', fontWeight: 600 }}
               >
                 <Trash2 size={14} />
-                <span>수집 목록 전체 비우기</span>
+                <span>수집 목록 전체 비우기 ({newsList.length}건)</span>
               </button>
             )}
 
@@ -471,16 +464,42 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         </div>
 
         {filteredNews.length === 0 ? (
-          <div className="empty-state">
-            <RefreshCw size={40} className="text-muted mb-2 spin" />
-            <h4>실시간 프랑스 파리 신제품 속보 기사를 수집하는 중입니다...</h4>
-            <p className="text-muted">잠시만 기다리시면 Google News FR 및 프랑스 매체 라이브 기사가 자동으로 들어옵니다.</p>
+          <div className="empty-state" style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '2px dashed var(--border-color)' }}>
+            <Bookmark size={36} className="text-muted mb-2" style={{ opacity: 0.5 }} />
+            <h4 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>현재 수집 대기 목록이 0건으로 깔끔히 비워져 있습니다.</h4>
+            <p className="text-muted" style={{ fontSize: '0.9rem' }}>
+              상단의 <strong>[🧪 파싱 테스트]</strong> 또는 <strong>[전체 RSS 파싱 & DB 자동 등록]</strong> 버튼을 누르시면 실시간 파리 기사가 새로 수집됩니다!
+            </p>
           </div>
         ) : (
           <div className="news-feed-list">
             {filteredNews.map((article) => (
-              <div key={article.id} className="news-item-card">
-                <div className="news-meta">
+              <div key={article.id} className="news-item-card" style={{ position: 'relative' }}>
+                {/* Delete Button for Individual Article */}
+                <button
+                  onClick={() => onRemoveNews(article.id)}
+                  title="이 기사 삭제"
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'content',
+                    cursor: 'pointer',
+                    zIndex: 2,
+                  }}
+                >
+                  <X size={14} />
+                </button>
+
+                <div className="news-meta" style={{ paddingRight: '28px' }}>
                   <span className="badge-cat">{article.category}</span>
                   <span className="source-tag">{article.source}</span>
                   <span className="date-tag">{article.publishedAt}</span>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ProductItem, NewsArticle, PublishStatus, TelegramConfig } from './types';
-import { INITIAL_PRODUCTS, INITIAL_NEWS } from './utils/sampleData';
+import { INITIAL_PRODUCTS } from './utils/sampleData';
 import { getTelegramConfig } from './utils/telegramService';
 import { Navbar } from './components/Navbar';
 import { NewsCollector } from './components/NewsCollector';
@@ -17,13 +17,13 @@ export const App: React.FC = () => {
 
   const [telegramConfig, setTelegramConfig] = useState<TelegramConfig>(() => getTelegramConfig());
 
-  // LocalStorage State Initialization with Always-On Seed Guarantee
+  // LocalStorage State Initialization
   const [products, setProducts] = useState<ProductItem[]>(() => {
     const saved = localStorage.getItem('paris_products');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
     return INITIAL_PRODUCTS;
@@ -34,20 +34,13 @@ export const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
-    return INITIAL_NEWS;
+    return [];
   });
 
   const [selectedProductForContent, setSelectedProductForContent] = useState<ProductItem | null>(null);
-
-  // Guarantee non-empty newsList on mount
-  useEffect(() => {
-    if (!newsList || newsList.length === 0) {
-      setNewsList(INITIAL_NEWS);
-    }
-  }, [newsList]);
 
   useEffect(() => {
     localStorage.setItem('paris_products', JSON.stringify(products));
@@ -66,22 +59,23 @@ export const App: React.FC = () => {
     setProducts((prev) => [item, ...prev]);
   };
 
+  // Genuine Single/Full Clear Removal handlers
   const handleRemoveNews = (newsId: string) => {
-    setNewsList((prev) => {
-      const next = prev.filter((n) => n.id !== newsId);
-      return next.length > 0 ? next : INITIAL_NEWS;
-    });
+    setNewsList((prev) => prev.filter((n) => n.id !== newsId));
   };
 
   const handleAddNewsArticles = (newArticles: NewsArticle[]) => {
     setNewsList((prev) => {
-      const combined = [...newArticles, ...prev];
-      return combined.length > 0 ? combined : INITIAL_NEWS;
+      // Deduplicate by URL or title
+      const existingUrls = new Set(prev.map(a => a.url));
+      const filteredNew = newArticles.filter(a => !existingUrls.has(a.url));
+      return [...filteredNew, ...prev];
     });
   };
 
   const handleClearNewsList = () => {
-    setNewsList(INITIAL_NEWS);
+    setNewsList([]);
+    localStorage.setItem('paris_news', JSON.stringify([]));
   };
 
   const handleUpdateProduct = (updated: ProductItem) => {
@@ -131,7 +125,7 @@ export const App: React.FC = () => {
       <main className="main-content">
         {activeTab === 'collector' && (
           <NewsCollector
-            newsList={newsList.length > 0 ? newsList : INITIAL_NEWS}
+            newsList={newsList}
             onImportToInbox={handleImportToInbox}
             onRemoveNews={handleRemoveNews}
             onAddNewsArticles={handleAddNewsArticles}
