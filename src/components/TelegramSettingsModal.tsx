@@ -1,198 +1,226 @@
-import React, { useState, useEffect } from 'react';
-import { TelegramConfig } from '../types';
-import { getTelegramConfig, saveTelegramConfig, testTelegramConnection, DEFAULT_BOT_TOKEN, DEFAULT_CHAT_ID } from '../utils/telegramService';
-import { Send, X, CheckCircle, AlertCircle, Info, ExternalLink, Zap, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Send, ShieldCheck, CheckCircle2, MessageSquare, Bell, Sliders, Info, Zap } from 'lucide-react';
+import { getNotificationConfig, saveNotificationConfig, sendProductNotification, NotificationConfig } from '../utils/notificationService';
 
-interface TelegramSettingsModalProps {
+interface NotificationSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfigSaved: (config: TelegramConfig) => void;
+  onConfigSaved?: (config: NotificationConfig) => void;
 }
 
-export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
+export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   isOpen,
   onClose,
   onConfigSaved,
 }) => {
-  const [config, setConfig] = useState<TelegramConfig>({
-    botToken: DEFAULT_BOT_TOKEN,
-    chatId: DEFAULT_CHAT_ID,
-    enabled: true,
-  });
-
-  const [showToken, setShowToken] = useState<boolean>(false);
+  const [config, setConfig] = useState<NotificationConfig>(() => getNotificationConfig());
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      const current = getTelegramConfig();
-      setConfig(current);
-      setTestResult(null);
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    saveTelegramConfig(config);
-    onConfigSaved(config);
-    onClose();
+    saveNotificationConfig(config);
+    if (onConfigSaved) onConfigSaved(config);
+    setTestResult({ success: true, message: '✅ 클린 알림 채널 설정이 성공적으로 저장되었습니다!' });
+    setTimeout(() => {
+      setTestResult(null);
+      onClose();
+    }, 1200);
   };
 
-  const handleTestConnection = async () => {
+  const handleTestNotification = async () => {
     setIsTesting(true);
     setTestResult(null);
-    try {
-      const result = await testTelegramConnection(config.botToken, config.chatId);
-      setTestResult(result);
-    } catch (err: any) {
-      setTestResult({
-        success: false,
-        message: `❌ 네트워크 오류: ${err.message || '요청 중 예외가 발생했습니다.'}`
-      });
-    } finally {
-      setIsTesting(false);
-    }
+
+    const testProduct = {
+      id: 'test-item',
+      collectedAt: new Date().toISOString().split('T')[0],
+      brand: 'Jacquemus (테스트 알림)',
+      productName: 'Le Chiquito Paris Exclusive (100% 클린 테스트)',
+      category: '패션' as const,
+      status: 'Inbox' as const,
+      launchDate: '2026-08-08',
+      location: '파리 마레 지구 팝업스토어',
+      price: '180€',
+      keyFeatures: '스팸/광고 0%! 슬랙 및 디스코드로 즉시 발송되는 파리 신제품 알림 테스트입니다.',
+      targetAudience: '파리 현지 직구족',
+      sourceUrl: 'https://paris-launch-hub.pariscommetoi.workers.dev',
+      sourceName: 'Paris Launch Hub',
+      reliability: '공식 테스트',
+      importance: '높음' as const,
+      importanceScore: 9,
+      scoreDetails: { isOfficialAnnouncement: true, isAvailableForPurchase: true, isParisExclusive: true, isMajorEvent: true, isTrustedMedia: true },
+      followUp: '테스트 완료',
+      naverStatus: '대기' as const,
+      instaStatus: '대기' as const,
+      imagePrepared: true,
+    };
+
+    const res = await sendProductNotification(config, testProduct);
+    setTestResult(res);
+    setIsTesting(false);
   };
 
-  // 통신사 차단을 100% 뚫는 AllOrigins 프록시 우회 직통 링크
-  const directTargetUrl = `https://api.telegram.org/bot${config.botToken}/sendMessage?chat_id=${config.chatId}&text=${encodeURIComponent('🇫🇷 [PARIS LAUNCH HUB] 1-Click 우회 직통 텔레그램 테스트 성공!')}`;
-  const proxyBypassLink = `https://api.allorigins.win/raw?url=${encodeURIComponent(directTargetUrl)}`;
-
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content card shadow-lg" style={{ maxWidth: '580px' }}>
-        <div className="modal-header">
+    <div className="modal-overlay" style={{ zIndex: 1100 }}>
+      <div className="modal-content card shadow-lg" style={{ maxWidth: '600px', width: '90%', padding: '24px' }}>
+        <div className="modal-header flex justify-between items-center mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
           <div className="flex items-center gap-2">
-            <div className="icon-wrapper blue">
-              <Send size={20} />
+            <div className="icon-wrapper navy" style={{ width: '36px', height: '36px' }}>
+              <Bell size={20} />
             </div>
             <div>
-              <h3>텔레그램 봇 연동 및 알림 설정</h3>
-              <p className="subtitle">모바일 텔레그램으로 파리 신제품 브리핑 & 승인(컨펌) 메시지 수신</p>
+              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>🛡️ 100% 클린 무광고 알림 채널 설정</h3>
+              <p className="text-muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+                포르노/스팸 광고 0%! 슬랙(Slack) & 디스코드(Discord) 1초 연동
+              </p>
             </div>
           </div>
-          <button className="btn-icon" onClick={onClose}>
+          <button onClick={onClose} className="btn-icon" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
-        <div className="modal-body">
-          {/* Guide Banner */}
-          <div className="alert-box info mb-4">
-            <Info size={18} />
-            <div>
-              <strong>텔레그램 봇 설정 완료 (@빠꼼데 봇)</strong>
-              <p style={{ fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                봇 토큰과 챗 ID(<code>7875527137</code>)가 사전 세팅되었습니다.<br />
-                텔레그램 앱에서 <code>@pcds75bot</code> 봇에게 <strong>/start</strong>를 1회 보내두시면 즉시 수신 가능합니다.
-              </p>
-              <div style={{ marginTop: '8px' }}>
-                <a
-                  href="https://t.me/pcds75bot"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-text inline-flex items-center gap-1"
-                  style={{ color: '#2563eb', fontWeight: 600, fontSize: '0.85rem' }}
-                >
-                  <span>📲 텔레그램 스마트폰 앱에서 @pcds75bot 봇 직통 열기</span>
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-            </div>
-          </div>
+        {/* Channel Selection Tabs */}
+        <div className="flex gap-2 mb-4" style={{ background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
+          <button
+            onClick={() => setConfig({ ...config, channelType: 'slack' })}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              background: config.channelType === 'slack' ? '#ffffff' : 'transparent',
+              color: config.channelType === 'slack' ? '#4a154b' : '#64748b',
+              boxShadow: config.channelType === 'slack' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            💬 Slack 슬랙 (강추/광고0%)
+          </button>
 
-          <div className="form-group mb-3">
-            <label className="flex justify-between items-center">
-              <span>텔레그램 알림 활성화</span>
-              <input
-                type="checkbox"
-                checked={config.enabled}
-                onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </label>
-          </div>
+          <button
+            onClick={() => setConfig({ ...config, channelType: 'discord' })}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              background: config.channelType === 'discord' ? '#ffffff' : 'transparent',
+              color: config.channelType === 'discord' ? '#5865f2' : '#64748b',
+              boxShadow: config.channelType === 'discord' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            🎮 Discord 디스코드 (추천)
+          </button>
 
-          <div className="form-group mb-3">
-            <div className="flex justify-between items-center mb-1">
-              <label>텔레그램 봇 토큰 (Bot Token)</label>
-              <button 
-                type="button" 
-                className="btn-text" 
-                onClick={() => setShowToken(!showToken)}
-                style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
-                <span>{showToken ? '숨기기' : '보기'}</span>
-              </button>
-            </div>
-            <input
-              type={showToken ? 'text' : 'password'}
-              placeholder="8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E"
-              value={config.botToken}
-              onChange={(e) => setConfig({ ...config, botToken: e.target.value })}
-              className="input-field"
-              style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-            />
-          </div>
-
-          <div className="form-group mb-4">
-            <label>텔레그램 챗 ID (Chat ID)</label>
-            <input
-              type="text"
-              placeholder="7875527137"
-              value={config.chatId}
-              onChange={(e) => setConfig({ ...config, chatId: e.target.value })}
-              className="input-field"
-              style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-            />
-          </div>
-
-          {/* Test Status Result */}
-          {testResult && (
-            <div className={`alert-box ${testResult.success ? 'success' : 'warning'} mb-4`}>
-              {testResult.success ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-              <div>
-                <span>{testResult.message}</span>
-                {!testResult.success && (
-                  <div style={{ marginTop: '8px' }}>
-                    <a
-                      href={proxyBypassLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-text inline-flex items-center gap-1"
-                      style={{ color: '#d97706', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'underline' }}
-                    >
-                      <span>⚡ [통신사 차단 우회] 1-Click 메세지 직통 쏘기 누르기</span>
-                      <ExternalLink size={14} />
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <button
+            onClick={() => setConfig({ ...config, channelType: 'telegram' })}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              background: config.channelType === 'telegram' ? '#ffffff' : 'transparent',
+              color: config.channelType === 'telegram' ? '#0088cc' : '#64748b',
+              boxShadow: config.channelType === 'telegram' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            ✈️ Telegram (기존)
+          </button>
         </div>
 
-        <div className="modal-footer flex justify-between items-center" style={{ flexWrap: 'wrap', gap: '8px' }}>
-          <button 
-            type="button" 
-            className="btn-primary flex items-center gap-2"
-            onClick={handleTestConnection}
+        {/* Tab 1: Slack Webhook Settings */}
+        {config.channelType === 'slack' && (
+          <div className="form-group mb-4">
+            <label className="input-label" style={{ fontWeight: 600, color: '#4a154b' }}>
+              💬 Slack 수신용 Webhook URL 주소 입력:
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="https://hooks.slack.com/services/T.../B.../..."
+              value={config.slackWebhookUrl}
+              onChange={(e) => setConfig({ ...config, slackWebhookUrl: e.target.value })}
+              style={{ fontFamily: 'monospace', fontSize: '0.85rem', padding: '10px' }}
+            />
+            <div className="alert-box info mt-2" style={{ background: '#fdf4ff', border: '1px solid #f5d0fe', color: '#701a75', fontSize: '0.8rem' }}>
+              💡 <strong>Slack 연결 방법:</strong> Slack 앱에서 내 채널 우클릭 ➔ 앱 추가 ➔ <strong>"Incoming WebHooks"</strong> 선택 후 생성된 URL을 위 상자에 붙여넣으시면 스팸 광고 0%의 알림이 전송됩니다!
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Discord Webhook Settings */}
+        {config.channelType === 'discord' && (
+          <div className="form-group mb-4">
+            <label className="input-label" style={{ fontWeight: 600, color: '#5865f2' }}>
+              🎮 Discord 수신용 Webhook URL 주소 입력:
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="https://discord.com/api/webhooks/123.../abc..."
+              value={config.discordWebhookUrl}
+              onChange={(e) => setConfig({ ...config, discordWebhookUrl: e.target.value })}
+              style={{ fontFamily: 'monospace', fontSize: '0.85rem', padding: '10px' }}
+            />
+            <div className="alert-box info mt-2" style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: '0.8rem' }}>
+              💡 <strong>Discord 연결 방법:</strong> 디스코드 내 개인 서버 ⚙️ 채널 설정 ➔ 연동(Integrations) ➔ <strong>"웹후크 만들기(Create Webhook)"</strong> ➔ 웹후크 URL 복사 후 위에 붙여넣으세요!
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Telegram Settings */}
+        {config.channelType === 'telegram' && (
+          <div className="form-group mb-4">
+            <label className="input-label" style={{ fontWeight: 600 }}>Telegram Bot Token:</label>
+            <input
+              type="text"
+              className="input-field mb-2"
+              value={config.telegramBotToken}
+              onChange={(e) => setConfig({ ...config, telegramBotToken: e.target.value })}
+              style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+            />
+            <label className="input-label" style={{ fontWeight: 600 }}>Telegram Chat ID:</label>
+            <input
+              type="text"
+              className="input-field"
+              value={config.telegramChatId}
+              onChange={(e) => setConfig({ ...config, telegramChatId: e.target.value })}
+              style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+            />
+          </div>
+        )}
+
+        {testResult && (
+          <div className={`alert-box ${testResult.success ? 'success' : 'error'} mb-4`} style={{ padding: '10px 14px', fontSize: '0.85rem' }}>
+            <span>{testResult.message}</span>
+          </div>
+        )}
+
+        <div className="flex justify-between items-center mt-4" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+          <button
+            className="btn-secondary"
+            onClick={handleTestNotification}
             disabled={isTesting}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Zap size={16} />
-            <span>{isTesting ? '우회 서버 발송 중...' : '⚡ 텔레그램 테스트 메시지 즉시 전송'}</span>
+            <Send size={14} />
+            <span>{isTesting ? '알림 테스트 중...' : '🧪 테스트 알림 발송하기'}</span>
           </button>
 
           <div className="flex gap-2">
-            <button type="button" className="btn-secondary" onClick={onClose}>
-              취소
-            </button>
-            <button type="button" className="btn-primary" onClick={handleSave}>
-              설정 저장
-            </button>
+            <button className="btn-outline" onClick={onClose}>취소</button>
+            <button className="btn-primary" onClick={handleSave}>설정 저장 완료</button>
           </div>
         </div>
       </div>
