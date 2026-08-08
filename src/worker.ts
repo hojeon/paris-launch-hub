@@ -112,6 +112,11 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    // 0. Auto 301 Redirect old domain (pct88.workers.dev) to primary domain (pariscommetoi.workers.dev)
+    if (url.hostname.includes('pct88.workers.dev')) {
+      return Response.redirect(`https://paris-launch-hub.pariscommetoi.workers.dev${url.pathname}${url.search}`, 301);
+    }
+
     // Handle OPTIONS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
