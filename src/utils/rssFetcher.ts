@@ -67,8 +67,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
 ];
 
 /**
- * Contextual Productness Evaluation Engine (No Hardcoded Forbidden Words)
- * Evaluates whether an article is actually about a commercial product/brand/launch.
+ * Contextual Productness Evaluation Engine
  */
 export function calculateProductnessScore(title: string, description: string = ''): number {
   let score = 0;
@@ -94,9 +93,8 @@ export function calculateProductnessScore(title: string, description: string = '
     score += 20;
   }
 
-  // 5. Negative Non-Commercial Context Multiplier (Socio-political / Fuel / Subsidy Policy without product context)
+  // 5. Negative Non-Commercial Context Multiplier
   if (combined.includes('déplacement') || combined.includes('gouvernement') || combined.includes('décret') || combined.includes('carburant') || combined.includes('indemnité')) {
-    // If it lacks product/brand/store signals, reduce score heavily
     if (!combined.includes('marque') && !combined.includes('collection') && !combined.includes('boutique') && !combined.includes('flacon')) {
       score -= 50;
     }
@@ -106,7 +104,7 @@ export function calculateProductnessScore(title: string, description: string = '
 }
 
 /**
- * Genuine Live XML RSS/Atom Fetcher Engine with Contextual Productness Classifier
+ * Genuine Live XML RSS/Atom Fetcher Engine with Exact Direct Article URL Extraction
  */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
   console.log(`[RSS Engine] Live fetch for: ${feed.name} (${feed.url})`);
@@ -211,7 +209,7 @@ export async function fetchSingleSiteFullRss(feedUrl: string = 'https://fr.fashi
 }
 
 /**
- * Genuine XML Parser for RSS 2.0 (<item>), Atom (<entry>), and RDF RSS 1.0 (<item>)
+ * Genuine XML Parser with Exact Individual Article Link Extractor
  */
 function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>): NewsArticle[] {
   const articles: NewsArticle[] = [];
@@ -248,25 +246,25 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
       let description = descNode ? (descNode.textContent || '').trim() : '';
       description = stripHtmlTags(description);
 
-      // 🚫 Contextual Productness Evaluation (No hardcoded keyword ban)
       const pScore = calculateProductnessScore(title, description);
-      if (pScore < 15) {
-        console.warn(`[Context Filter Drop] Low productness (${pScore}): ${title}`);
-        return;
-      }
+      if (pScore < 15) return;
 
-      // 3. Extract Link
-      let link = '';
+      // 3. 🔗 EXACT DIRECT ARTICLE LINK EXTRACTION (Priority 1)
+      let articleDirectUrl = '';
       const linkNode = node.querySelector('link');
       if (linkNode) {
-        link = linkNode.getAttribute('href') || (linkNode.textContent || '').trim();
+        articleDirectUrl = linkNode.getAttribute('href') || (linkNode.textContent || '').trim();
       }
-      if (!link) {
+      if (!articleDirectUrl || !articleDirectUrl.startsWith('http')) {
         const guidNode = node.querySelector('guid') || node.querySelector('id');
-        link = guidNode ? (guidNode.textContent || '').trim() : '';
+        const guidText = guidNode ? (guidNode.textContent || '').trim() : '';
+        if (guidText.startsWith('http')) {
+          articleDirectUrl = guidText;
+        }
       }
-      if (!link || !link.startsWith('http')) {
-        link = feed.siteUrl || feed.url || 'https://news.google.com';
+      // If direct link still missing, search via Google direct article query
+      if (!articleDirectUrl || !articleDirectUrl.startsWith('http')) {
+        articleDirectUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' ' + (feed.name || ''))}`;
       }
 
       const snippet = description.length > 0
@@ -287,7 +285,7 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
         } catch (e) {}
       }
 
-      // 5. Intelligent Field Extraction (Supports English + French + Indie Brands)
+      // 5. Intelligent Field Extraction
       const brand = extractBrandFromTitle(title) || feedName;
       const price = extractPriceFromSnippet(description + ' ' + title) || '가격 확인 필요';
       const location = extractLocationFromText(title + ' ' + description) || '파리 매장 / 온라인';
@@ -297,7 +295,7 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
         title: title,
         source: feedName,
         publishedAt: formattedDate,
-        url: link,
+        url: articleDirectUrl,
         snippet: snippet,
         category: normalizeCategory(feedCategory),
         suggestedBrand: brand,
@@ -331,9 +329,11 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
 
     if (calculateProductnessScore(title, desc) < 15) return;
 
-    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : 'https://news.google.com';
+    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : '';
     link = stripHtmlTags(link);
-    if (!link.startsWith('http')) link = 'https://news.google.com';
+    if (!link.startsWith('http')) {
+      link = `https://www.google.com/search?q=${encodeURIComponent(title)}`;
+    }
 
     const snippet = desc.length > 0 ? desc.slice(0, 220) + '...' : title;
 
@@ -364,7 +364,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
   return articles;
 }
 
-function normalizeCategory(cat: string): '패션' | '뷰티' | '식품' | '테크' {
+function normalizeCategory(cat: string): '패션' | '뷰티' | '식품' | '테크': '패션' | '뷰티' | '식품' | '테크' {
   if (!cat) return '패션';
   if (cat.includes('뷰티') || cat.includes('화장품') || cat.includes('Beauté') || cat.includes('Beauty')) return '뷰티';
   if (cat.includes('식품') || cat.includes('디저트') || cat.includes('미식') || cat.includes('Food')) return '식품';

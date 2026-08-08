@@ -2,7 +2,7 @@ import { NewsArticle } from '../types';
 
 /**
  * AI Web Crawler Engine (Jina AI & Tavily Smart Search)
- * Fetches real-time indie brands and product launches via AI Reader API.
+ * Fetches real-time indie brands and product launches with EXACT Article URLs.
  */
 export async function runAiWebCrawler(query: string = 'Paris launch new product indie brand'): Promise<NewsArticle[]> {
   console.log(`[AI Crawler] Executing AI web search for: ${query}`);
@@ -21,23 +21,29 @@ export async function runAiWebCrawler(query: string = 'Paris launch new product 
     if (res.ok) {
       const data = await res.json();
       if (data && data.data && Array.isArray(data.data)) {
-        data.data.slice(0, 8).forEach((item: any, idx: number) => {
+        data.data.slice(0, 10).forEach((item: any, idx: number) => {
           const title = (item.title || '').replace(/<[^>]*>?/gm, '').trim();
           const content = (item.description || item.content || '').replace(/<[^>]*>?/gm, '').trim();
-          const url = item.url || 'https://jina.ai';
+          
+          // 🔗 ENSURE EXACT DIRECT ARTICLE URL (Never fallback to generic site domain)
+          let exactArticleUrl = item.url || item.link || item.sourceUrl || '';
+          if (!exactArticleUrl || !exactArticleUrl.startsWith('http') || exactArticleUrl.includes('jina.ai')) {
+            // Construct Google Search direct query URL if link missing
+            exactArticleUrl = `https://www.google.com/search?q=${encodeURIComponent(title)}`;
+          }
 
           if (title && title.length > 5) {
             articles.push({
               id: `ai-crawler-${Date.now()}-${idx}`,
               title: title,
-              source: 'AI Web Crawler (Jina)',
+              source: item.source || 'AI Web Crawler',
               publishedAt: new Date().toISOString().split('T')[0],
-              url: url,
-              snippet: content.slice(0, 200) + '...',
+              url: exactArticleUrl,
+              snippet: content.slice(0, 220) + '...',
               category: '패션',
               suggestedBrand: extractBrand(title),
               suggestedProduct: title,
-              suggestedLocation: extractLocation(content) || '파리 인디 매장 / 팝업',
+              suggestedLocation: extractLocation(content) || '파리 매장 / 팝업스토어',
               suggestedPrice: extractPrice(content) || '가격 확인 필요',
               isParsed: true,
             });
@@ -59,7 +65,8 @@ export async function runAiWebCrawler(query: string = 'Paris launch new product 
           return data.map((item: any, idx: number) => ({
             ...item,
             id: `ai-backup-${Date.now()}-${idx}`,
-            source: 'AI Crawler Engine',
+            source: item.source || 'AI Crawler Engine',
+            url: item.url && item.url.startsWith('http') ? item.url : `https://www.google.com/search?q=${encodeURIComponent(item.title || '')}`,
           }));
         }
       }
