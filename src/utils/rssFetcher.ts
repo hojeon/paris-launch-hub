@@ -364,7 +364,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
   return articles;
 }
 
-function normalizeCategory(cat: string): '패션' | '뷰티' | '식품' | '테크': '패션' | '뷰티' | '식품' | '테크' {
+function normalizeCategory(cat: string): '패션' | '뷰티' | '식품' | '테크' {
   if (!cat) return '패션';
   if (cat.includes('뷰티') || cat.includes('화장품') || cat.includes('Beauté') || cat.includes('Beauty')) return '뷰티';
   if (cat.includes('식품') || cat.includes('디저트') || cat.includes('미식') || cat.includes('Food')) return '식품';
