@@ -2,7 +2,7 @@ import { NewsArticle } from '../types';
 
 /**
  * AI Web Crawler Engine (Jina AI & Tavily Smart Search)
- * Fetches real-time indie brands and product launches with EXACT Article URLs.
+ * Strictly requires real, valid HTTP URLs. Rejects fake/mock items.
  */
 export async function runAiWebCrawler(query: string = 'Paris launch new product indie brand'): Promise<NewsArticle[]> {
   console.log(`[AI Crawler] Executing AI web search for: ${query}`);
@@ -25,11 +25,11 @@ export async function runAiWebCrawler(query: string = 'Paris launch new product 
           const title = (item.title || '').replace(/<[^>]*>?/gm, '').trim();
           const content = (item.description || item.content || '').replace(/<[^>]*>?/gm, '').trim();
           
-          // 🔗 ENSURE EXACT DIRECT ARTICLE URL (Never fallback to generic site domain)
           let exactArticleUrl = item.url || item.link || item.sourceUrl || '';
+          
+          // Reject invalid URLs (must be direct http/https and not jina API domain)
           if (!exactArticleUrl || !exactArticleUrl.startsWith('http') || exactArticleUrl.includes('jina.ai')) {
-            // Construct Google Search direct query URL if link missing
-            exactArticleUrl = `https://www.google.com/search?q=${encodeURIComponent(title)}`;
+            return;
           }
 
           if (title && title.length > 5) {
@@ -52,25 +52,7 @@ export async function runAiWebCrawler(query: string = 'Paris launch new product 
       }
     }
   } catch (err) {
-    console.warn('[AI Crawler] Jina API failed, switching to backup crawler', err);
-  }
-
-  // Method 2: Worker Edge Backup Crawler
-  if (articles.length === 0) {
-    try {
-      const res = await fetch('/api/news');
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          return data.map((item: any, idx: number) => ({
-            ...item,
-            id: `ai-backup-${Date.now()}-${idx}`,
-            source: item.source || 'AI Crawler Engine',
-            url: item.url && item.url.startsWith('http') ? item.url : `https://www.google.com/search?q=${encodeURIComponent(item.title || '')}`,
-          }));
-        }
-      }
-    } catch (e) {}
+    console.warn('[AI Crawler] Jina API call failed', err);
   }
 
   return articles;
