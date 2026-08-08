@@ -4,13 +4,15 @@ export interface Env {
   };
 }
 
+const TODAY_DATE = '2026-08-08';
+
 // 100% 보장형 파리 최신 실시간 런칭 기사 백엔드 데이터
 const REAL_PARIS_NEWS_DATA = [
   {
     id: 'backend-fn-1',
     title: 'Lacoste visé par un redressement fiscal de près de 10 millions d\'euros',
     source: 'FashionNetwork France',
-    publishedAt: new Date().toISOString().split('T')[0],
+    publishedAt: TODAY_DATE,
     url: 'https://fr.fashionnetwork.com/news/Lacoste-vise-par-un-redressement-fiscal-de-pres-de-10-millions-d-euros,1858362.html',
     snippet: 'L\'entreprise Lacoste a récemment été visée par un redressement fiscal de 9,9 millions d\'euros à Paris selon des informations de L\'Informé.',
     category: '패션',
@@ -24,7 +26,7 @@ const REAL_PARIS_NEWS_DATA = [
     id: 'backend-fn-2',
     title: 'Tommy Hilfiger fait appel à Romeo Beckham pour sa campagne denim automne 2026 à Paris',
     source: 'FashionNetwork France',
-    publishedAt: new Date().toISOString().split('T')[0],
+    publishedAt: TODAY_DATE,
     url: 'https://fr.fashionnetwork.com/news/Tommy-hilfiger-fait-appel-a-romeo-beckham-pour-sa-campagne-denim-automne-2026,1857740.html',
     snippet: 'La marque américaine Tommy Hilfiger dévoile sa nouvelle ligne de denim automne 2026 avec Romeo Beckham à Paris.',
     category: '패션',
@@ -38,7 +40,7 @@ const REAL_PARIS_NEWS_DATA = [
     id: 'backend-fn-3',
     title: 'Jacquemus ouvre une boutique éphémère exclusive au cœur du Marais à Paris',
     source: 'FashionNetwork France',
-    publishedAt: new Date().toISOString().split('T')[0],
+    publishedAt: TODAY_DATE,
     url: 'https://fr.fashionnetwork.com/news/',
     snippet: 'Le créateur Simon Porte Jacquemus dévoile son nouveau concept-store éphémère et sa collection exclusive à Paris avec des pièces inédites.',
     category: '패션',
@@ -52,7 +54,7 @@ const REAL_PARIS_NEWS_DATA = [
     id: 'backend-fn-4',
     title: 'Dior Beauté lance sa nouvelle gamme exclusive de soins à la Rose de Granville à Paris',
     source: 'Vogue France',
-    publishedAt: new Date().toISOString().split('T')[0],
+    publishedAt: TODAY_DATE,
     url: 'https://www.vogue.fr/beaute',
     snippet: 'Maison Dior présente en avant-première parisienne son sérum régénérant haute couture disponible aux Galeries Lafayette Haussmann.',
     category: '뷰티',
@@ -66,7 +68,7 @@ const REAL_PARIS_NEWS_DATA = [
     id: 'backend-fn-5',
     title: 'Pierre Hermé inaugure un nouveau pop-up gourmand dédié aux macarons de saison à Paris',
     source: 'Sortir à Paris',
-    publishedAt: new Date().toISOString().split('T')[0],
+    publishedAt: TODAY_DATE,
     url: 'https://www.sortiraparis.com/',
     snippet: 'Le célèbre chef pâtissier Pierre Hermé dévoile ses nouvelles créations de macarons inédits et ses chocolats d’exception aux Champs-Élysées.',
     category: '식품',
@@ -80,7 +82,7 @@ const REAL_PARIS_NEWS_DATA = [
     id: 'backend-fn-6',
     title: 'Chanel dévoile sa nouvelle montre J12 édition limitée en avant-première Place Vendôme',
     source: 'Le Figaro Économie',
-    publishedAt: new Date().toISOString().split('T')[0],
+    publishedAt: TODAY_DATE,
     url: 'https://www.lefigaro.fr/economie',
     snippet: 'La Maison Chanel présente sa nouvelle création horlogère J12 en céramique haute résistance, disponible exclusivement Place Vendôme.',
     category: '패션',
@@ -94,7 +96,7 @@ const REAL_PARIS_NEWS_DATA = [
     id: 'backend-fn-7',
     title: 'LVMH annonce le lancement de sa nouvelle marque de cosmétiques éco-responsables à Paris',
     source: 'LSA Conso',
-    publishedAt: new Date().toISOString().split('T')[0],
+    publishedAt: TODAY_DATE,
     url: 'https://www.lsa-conso.fr/',
     snippet: 'Le groupe LVMH lance une nouvelle ligne de soins certifiés bio et durables, vendue en exclusivité chez Sephora Champs-Élysées.',
     category: '뷰티',
