@@ -3,16 +3,25 @@ import { NewsArticle, RssFeedSource } from '../types';
 export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   {
     id: 'rss-fashionnetwork-fr',
-    name: 'FashionNetwork France (실시간 무필터 원본)',
+    name: 'FashionNetwork France (패션/뷰티 런칭)',
     url: 'https://fr.fashionnetwork.com/rss/feed/fr,0.xml',
     siteUrl: 'https://fr.fashionnetwork.com/news/',
     category: '패션',
-    description: '검색어/키워드 필터 없이 FashionNetwork 최신 속보 전체 파싱',
+    description: '파리 패션위크, 명품 브랜딩, 뷰티/의류 런칭 실시간 RSS',
+    isPreset: true,
+  },
+  {
+    id: 'rss-google-news-paris-bool',
+    name: 'Google News Paris Live (프랑스어 3중 정밀 검색식)',
+    url: 'https://news.google.com/rss/search?q=%28%22lancement%22+OR+%22nouveaut%C3%A9%22+OR+%22disponible%22+OR+%22exclusivit%C3%A9%22+OR+%22boutique+%C3%A9ph%C3%A9m%C3%A8re%22+OR+%22pop-up%22%29+AND+%28%22Paris%22+OR+%22France%22%29+AND+%28produit+OR+collection+OR+ouverture+OR+flagship+OR+%22avant-premi%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
+    siteUrl: 'https://news.google.com',
+    category: '패션',
+    description: '프랑스 전 언론사 실시간 파리 런칭/신제품/팝업 속보 3중 검색식 자동 수집',
     isPreset: true,
   },
   {
     id: 'rss-lefigaro-eco',
-    name: 'Le Figaro Économie',
+    name: 'Le Figaro Économie (테크/비즈니스)',
     url: 'https://www.lefigaro.fr/rss/figaro_economie.xml',
     siteUrl: 'https://www.lefigaro.fr/economie',
     category: '테크',
@@ -20,26 +29,17 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     isPreset: true,
   },
   {
-    id: 'rss-google-news-paris',
-    name: 'Google News France Paris Launch',
-    url: 'https://news.google.com/rss/search?q=lancement+produit+Paris+OR+nouveaut%C3%A9+Paris&hl=fr&gl=FR&ceid=FR:fr',
-    siteUrl: 'https://news.google.com',
-    category: '패션',
-    description: '프랑스 전 언론사 실시간 파리 런칭/신제품/팝업 속보',
-    isPreset: true,
-  },
-  {
     id: 'rss-leparisien',
-    name: 'Le Parisien',
+    name: 'Le Parisien (파리 팝업 & 라이프)',
     url: 'https://www.leparisien.fr/arc/outboundfeeds/rss/',
     siteUrl: 'https://www.leparisien.fr',
-    category: '패션',
-    description: '파리 현지 라이프스타일, 트렌드 & 팝업 속보',
+    category: '식품',
+    description: '파리 현지 라이프스타일, 트렌드, 팝업 & 디저트 속보',
     isPreset: true,
   },
   {
     id: 'rss-elle-fr',
-    name: 'ELLE France',
+    name: 'ELLE France (뷰티/트렌드)',
     url: 'https://www.elle.fr/rss/full',
     siteUrl: 'https://www.elle.fr',
     category: '뷰티',
@@ -49,51 +49,10 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
 ];
 
 /**
- * Single Site Raw XML Fetcher (No Filter, Pure RSS Items)
- */
-export async function fetchSingleSiteFullRss(feedUrl: string = 'https://fr.fashionnetwork.com/rss/feed/fr,0.xml'): Promise<{ articles: NewsArticle[]; sourceXmlBytes: number }> {
-  console.log(`[Single Site Engine] Fetching raw XML from: ${feedUrl}`);
-
-  let xmlText: string | null = null;
-
-  // 1. Worker Proxy
-  try {
-    const res = await fetch(`/api/rss-proxy?url=${encodeURIComponent(feedUrl)}`);
-    if (res.ok) {
-      const text = await res.text();
-      if (text && text.length > 100) xmlText = text;
-    }
-  } catch (e) {}
-
-  // 2. AllOrigins Proxy
-  if (!xmlText) {
-    try {
-      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`);
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.length > 100) xmlText = text;
-      }
-    } catch (e) {}
-  }
-
-  if (xmlText) {
-    const articles = parseRawXmlToArticles(xmlText, {
-      id: 'single-site',
-      name: 'FashionNetwork France',
-      url: feedUrl,
-      category: '패션',
-    });
-    return { articles, sourceXmlBytes: xmlText.length };
-  }
-
-  return { articles: [], sourceXmlBytes: 0 };
-}
-
-/**
  * Genuine Live XML RSS/Atom Fetcher Engine
  */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
-  console.log(`[RSS Engine] Genuine fetch for: ${feed.name} (${feed.url})`);
+  console.log(`[RSS Engine] Live fetch for: ${feed.name} (${feed.url})`);
 
   let xmlText: string | null = null;
 
@@ -116,20 +75,22 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
     }
   } catch (err: any) {}
 
-  // Attempt 2: Direct /api/news Endpoint Call
-  try {
-    const res = await fetch('/api/news');
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data.map((item: any, idx: number) => ({
-          ...item,
-          id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
-          category: normalizeCategory(item.category || feed.category),
-        }));
+  // Attempt 2: Direct /api/news Endpoint Call Fallback
+  if (!xmlText) {
+    try {
+      const res = await fetch('/api/news');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((item: any, idx: number) => ({
+            ...item,
+            id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+            category: normalizeCategory(item.category || feed.category),
+          }));
+        }
       }
-    }
-  } catch (e) {}
+    } catch (e) {}
+  }
 
   // Attempt 3: AllOrigins Raw Proxy Fallback
   if (!xmlText) {
@@ -154,11 +115,48 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
 }
 
 /**
+ * Single Site Raw XML Fetcher
+ */
+export async function fetchSingleSiteFullRss(feedUrl: string = 'https://fr.fashionnetwork.com/rss/feed/fr,0.xml'): Promise<{ articles: NewsArticle[]; sourceXmlBytes: number }> {
+  let xmlText: string | null = null;
+
+  try {
+    const res = await fetch(`/api/rss-proxy?url=${encodeURIComponent(feedUrl)}`);
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.length > 100) xmlText = text;
+    }
+  } catch (e) {}
+
+  if (!xmlText) {
+    try {
+      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.length > 100) xmlText = text;
+      }
+    } catch (e) {}
+  }
+
+  if (xmlText) {
+    const articles = parseRawXmlToArticles(xmlText, {
+      id: 'single-site',
+      name: 'FashionNetwork France',
+      url: feedUrl,
+      category: '패션',
+    });
+    return { articles, sourceXmlBytes: xmlText.length };
+  }
+
+  return { articles: [], sourceXmlBytes: 0 };
+}
+
+/**
  * Genuine XML Parser for RSS 2.0 (<item>), Atom (<entry>), and RDF RSS 1.0 (<item>)
  */
 function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>): NewsArticle[] {
   const articles: NewsArticle[] = [];
-  const feedName = feed.name || 'FashionNetwork France';
+  const feedName = feed.name || '파리 수집 매체';
   const feedCategory = feed.category || '패션';
 
   try {
@@ -178,7 +176,7 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
       return parseXmlWithRegexFallback(xmlString, feed);
     }
 
-    nodes.slice(0, 20).forEach((node, idx) => {
+    nodes.slice(0, 25).forEach((node, idx) => {
       // 1. Extract Title
       const titleNode = node.querySelector('title');
       let title = titleNode ? (titleNode.textContent || '').trim() : '';
@@ -197,7 +195,7 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
         link = guidNode ? (guidNode.textContent || '').trim() : '';
       }
       if (!link || !link.startsWith('http')) {
-        link = feed.siteUrl || feed.url || 'https://fr.fashionnetwork.com';
+        link = feed.siteUrl || feed.url || 'https://news.google.com';
       }
 
       // 3. Extract Description / Snippet
@@ -226,9 +224,10 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
       // 5. Intelligent Field Extraction
       const brand = extractBrandFromTitle(title) || feedName;
       const price = extractPriceFromSnippet(description) || '가격 확인 필요';
+      const location = extractLocationFromText(title + ' ' + description) || '파리 매장 / 온라인';
 
       articles.push({
-        id: `single-rss-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+        id: `full-rss-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
         title: title,
         source: feedName,
         publishedAt: formattedDate,
@@ -237,7 +236,7 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
         category: normalizeCategory(feedCategory),
         suggestedBrand: brand,
         suggestedProduct: title,
-        suggestedLocation: '파리 매장 / 온라인',
+        suggestedLocation: location,
         suggestedPrice: price,
         isParsed: false,
       });
@@ -253,7 +252,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
   const articles: NewsArticle[] = [];
   const itemMatches = xmlString.match(/<(item|entry)[\s\S]*?<\/(item|entry)>/gi) || [];
 
-  itemMatches.slice(0, 20).forEach((itemXml, idx) => {
+  itemMatches.slice(0, 25).forEach((itemXml, idx) => {
     const titleMatch = itemXml.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
     const linkMatch = itemXml.match(/<link[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i) || itemXml.match(/href=["'](https?:\/\/[^"']+)["']/i);
     const descMatch = itemXml.match(/<(description|summary|content)[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(description|summary|content)>/i);
@@ -262,12 +261,12 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
     const title = titleMatch ? stripHtmlTags(titleMatch[1]).trim() : '';
     if (!title) return;
 
-    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : 'https://fr.fashionnetwork.com';
+    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : 'https://news.google.com';
     link = stripHtmlTags(link);
-    if (!link.startsWith('http')) link = 'https://fr.fashionnetwork.com';
+    if (!link.startsWith('http')) link = 'https://news.google.com';
 
     const desc = descMatch ? stripHtmlTags(descMatch[2] || descMatch[1]).trim() : '';
-    const snippet = desc.length > 0 ? desc.slice(0, 200) + '...' : title;
+    const snippet = desc.length > 0 ? desc.slice(0, 220) + '...' : title;
 
     let formattedDate = new Date().toISOString().split('T')[0];
     if (dateMatch && dateMatch[2]) {
@@ -278,16 +277,16 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
     }
 
     articles.push({
-      id: `single-regex-${Date.now()}-${idx}`,
+      id: `full-regex-${Date.now()}-${idx}`,
       title: title,
-      source: feed.name || 'FashionNetwork France',
+      source: feed.name || '파리 수집 매체',
       publishedAt: formattedDate,
       url: link,
       snippet: snippet,
       category: normalizeCategory(feed.category || '패션'),
-      suggestedBrand: extractBrandFromTitle(title) || 'FashionNetwork',
+      suggestedBrand: extractBrandFromTitle(title) || '파리 브랜드',
       suggestedProduct: title,
-      suggestedLocation: '파리 매장 / 온라인',
+      suggestedLocation: extractLocationFromText(title + ' ' + desc) || '파리 매장 / 온라인',
       suggestedPrice: extractPriceFromSnippet(desc) || '가격 확인 필요',
       isParsed: false,
     });
@@ -329,4 +328,13 @@ function extractBrandFromTitle(title: string): string {
 function extractPriceFromSnippet(text: string): string | null {
   const priceMatch = text.match(/\b(\d+[\d\s\.,]*\s*(€|Euros?|EUR))\b/i);
   return priceMatch ? priceMatch[1].trim() : null;
+}
+
+function extractLocationFromText(text: string): string | null {
+  if (text.includes('Champs-Élysées') || text.includes('샹젤리제')) return '파리 샹젤리제 플래그십';
+  if (text.includes('Marais') || text.includes('마레')) return '파리 마레 지구 (Le Marais)';
+  if (text.includes('Galeries Lafayette') || text.includes('라파예트')) return '파리 갤러리 라파예트';
+  if (text.includes('Vendôme') || text.includes('방돔')) return '파리 방돔 광장 (Place Vendôme)';
+  if (text.includes('Sephora') || text.includes('세포라')) return '파리 세포라 매장';
+  return null;
 }
