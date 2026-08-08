@@ -3,11 +3,11 @@ import { NewsArticle, RssFeedSource } from '../types';
 export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   {
     id: 'rss-fashionnetwork-fr',
-    name: 'FashionNetwork France (실시간)',
+    name: 'FashionNetwork France (실시간 무필터 원본)',
     url: 'https://fr.fashionnetwork.com/rss/feed/fr,0.xml',
     siteUrl: 'https://fr.fashionnetwork.com/news/',
     category: '패션',
-    description: '파리 패션위크, 명품 브랜딩, 뷰티/의류 런칭 실시간 RSS',
+    description: '검색어/키워드 필터 없이 FashionNetwork 최신 속보 전체 파싱',
     isPreset: true,
   },
   {
@@ -49,14 +49,53 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
 ];
 
 /**
- * Genuine Live XML RSS/Atom Fetcher Engine
- * Fetches REAL XML from the provided feed URL and parses 14+ fields.
+ * Single Site Raw XML Fetcher (No Filter, Pure RSS Items)
  */
-export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
-  console.log(`[RSS Engine] Initiating genuine fetch for: ${feed.name} (${feed.url})`);
+export async function fetchSingleSiteFullRss(feedUrl: string = 'https://fr.fashionnetwork.com/rss/feed/fr,0.xml'): Promise<{ articles: NewsArticle[]; sourceXmlBytes: number }> {
+  console.log(`[Single Site Engine] Fetching raw XML from: ${feedUrl}`);
 
   let xmlText: string | null = null;
-  let fetchError: string = '';
+
+  // 1. Worker Proxy
+  try {
+    const res = await fetch(`/api/rss-proxy?url=${encodeURIComponent(feedUrl)}`);
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.length > 100) xmlText = text;
+    }
+  } catch (e) {}
+
+  // 2. AllOrigins Proxy
+  if (!xmlText) {
+    try {
+      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.length > 100) xmlText = text;
+      }
+    } catch (e) {}
+  }
+
+  if (xmlText) {
+    const articles = parseRawXmlToArticles(xmlText, {
+      id: 'single-site',
+      name: 'FashionNetwork France',
+      url: feedUrl,
+      category: '패션',
+    });
+    return { articles, sourceXmlBytes: xmlText.length };
+  }
+
+  return { articles: [], sourceXmlBytes: 0 };
+}
+
+/**
+ * Genuine Live XML RSS/Atom Fetcher Engine
+ */
+export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
+  console.log(`[RSS Engine] Genuine fetch for: ${feed.name} (${feed.url})`);
+
+  let xmlText: string | null = null;
 
   // Attempt 1: Cloudflare Worker RSS Proxy (/api/rss-proxy?url=...)
   try {
@@ -66,9 +105,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
       const text = await res.text();
       if (text && text.trim().length > 50 && (text.includes('<rss') || text.includes('<feed') || text.includes('<xml') || text.includes('<item') || text.includes('<entry>'))) {
         xmlText = text;
-        console.log(`[RSS Engine] Success via Worker Proxy (${xmlText.length} bytes)`);
       } else {
-        // Fallback: If Worker returned JSON items directly from fallback
         try {
           const parsedJson = JSON.parse(text);
           if (parsedJson.items && Array.isArray(parsedJson.items)) {
@@ -77,9 +114,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         } catch (e) {}
       }
     }
-  } catch (err: any) {
-    fetchError += `WorkerProxy: ${err.message}; `;
-  }
+  } catch (err: any) {}
 
   // Attempt 2: Direct /api/news Endpoint Call
   try {
@@ -103,47 +138,38 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
       const res = await fetch(rawProxyUrl);
       if (res.ok) {
         const text = await res.text();
-        if (text && text.trim().length > 50 && (text.includes('<rss') || text.includes('<feed') || text.includes('<xml') || text.includes('<item') || text.includes('<entry>'))) {
+        if (text && text.trim().length > 50) {
           xmlText = text;
-          console.log(`[RSS Engine] Success via AllOrigins Proxy (${xmlText.length} bytes)`);
         }
       }
-    } catch (err: any) {
-      fetchError += `AllOrigins: ${err.message}; `;
-    }
+    } catch (err: any) {}
   }
 
-  // If XML fetched successfully, parse XML nodes into NewsArticle[]
   if (xmlText) {
     const articles = parseRawXmlToArticles(xmlText, feed);
-    if (articles.length > 0) {
-      console.log(`[RSS Engine] Parsed ${articles.length} genuine articles from ${feed.name}`);
-      return articles;
-    }
+    if (articles.length > 0) return articles;
   }
 
-  console.error(`[RSS Engine] Failed to fetch or parse RSS feed for ${feed.name}. Errors: ${fetchError}`);
   return [];
 }
 
 /**
  * Genuine XML Parser for RSS 2.0 (<item>), Atom (<entry>), and RDF RSS 1.0 (<item>)
  */
-function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArticle[] {
+function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>): NewsArticle[] {
   const articles: NewsArticle[] = [];
+  const feedName = feed.name || 'FashionNetwork France';
+  const feedCategory = feed.category || '패션';
 
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
 
-    // Check for XML parsing error
     const parserError = xmlDoc.querySelector('parsererror');
     if (parserError) {
-      console.warn('[RSS Parser] DOMParser reported error, attempting HTML/regex extraction fallback');
       return parseXmlWithRegexFallback(xmlString, feed);
     }
 
-    // Support RSS <item> and Atom <entry>
     const rssItems = Array.from(xmlDoc.querySelectorAll('item'));
     const atomEntries = Array.from(xmlDoc.querySelectorAll('entry'));
     const nodes = rssItems.length > 0 ? rssItems : atomEntries;
@@ -152,7 +178,7 @@ function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArti
       return parseXmlWithRegexFallback(xmlString, feed);
     }
 
-    nodes.slice(0, 15).forEach((node, idx) => {
+    nodes.slice(0, 20).forEach((node, idx) => {
       // 1. Extract Title
       const titleNode = node.querySelector('title');
       let title = titleNode ? (titleNode.textContent || '').trim() : '';
@@ -171,7 +197,7 @@ function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArti
         link = guidNode ? (guidNode.textContent || '').trim() : '';
       }
       if (!link || !link.startsWith('http')) {
-        link = feed.siteUrl || feed.url;
+        link = feed.siteUrl || feed.url || 'https://fr.fashionnetwork.com';
       }
 
       // 3. Extract Description / Snippet
@@ -180,7 +206,7 @@ function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArti
       description = stripHtmlTags(description);
 
       const snippet = description.length > 0
-        ? description.slice(0, 200) + (description.length > 200 ? '...' : '')
+        ? description.slice(0, 220) + (description.length > 220 ? '...' : '')
         : title;
 
       // 4. Extract Date
@@ -198,17 +224,17 @@ function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArti
       }
 
       // 5. Intelligent Field Extraction
-      const brand = extractBrandFromTitle(title) || feed.name;
+      const brand = extractBrandFromTitle(title) || feedName;
       const price = extractPriceFromSnippet(description) || '가격 확인 필요';
 
       articles.push({
-        id: `rss-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+        id: `single-rss-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
         title: title,
-        source: feed.name,
+        source: feedName,
         publishedAt: formattedDate,
         url: link,
         snippet: snippet,
-        category: normalizeCategory(feed.category),
+        category: normalizeCategory(feedCategory),
         suggestedBrand: brand,
         suggestedProduct: title,
         suggestedLocation: '파리 매장 / 온라인',
@@ -223,14 +249,11 @@ function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArti
   return articles;
 }
 
-/**
- * Regex-based Parser Fallback for malformed XML or CDATA sections
- */
-function parseXmlWithRegexFallback(xmlString: string, feed: RssFeedSource): NewsArticle[] {
+function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSource>): NewsArticle[] {
   const articles: NewsArticle[] = [];
   const itemMatches = xmlString.match(/<(item|entry)[\s\S]*?<\/(item|entry)>/gi) || [];
 
-  itemMatches.slice(0, 15).forEach((itemXml, idx) => {
+  itemMatches.slice(0, 20).forEach((itemXml, idx) => {
     const titleMatch = itemXml.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i);
     const linkMatch = itemXml.match(/<link[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/i) || itemXml.match(/href=["'](https?:\/\/[^"']+)["']/i);
     const descMatch = itemXml.match(/<(description|summary|content)[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(description|summary|content)>/i);
@@ -239,9 +262,9 @@ function parseXmlWithRegexFallback(xmlString: string, feed: RssFeedSource): News
     const title = titleMatch ? stripHtmlTags(titleMatch[1]).trim() : '';
     if (!title) return;
 
-    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : feed.siteUrl;
+    let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : 'https://fr.fashionnetwork.com';
     link = stripHtmlTags(link);
-    if (!link.startsWith('http')) link = feed.siteUrl;
+    if (!link.startsWith('http')) link = 'https://fr.fashionnetwork.com';
 
     const desc = descMatch ? stripHtmlTags(descMatch[2] || descMatch[1]).trim() : '';
     const snippet = desc.length > 0 ? desc.slice(0, 200) + '...' : title;
@@ -255,14 +278,14 @@ function parseXmlWithRegexFallback(xmlString: string, feed: RssFeedSource): News
     }
 
     articles.push({
-      id: `rss-regex-${Date.now()}-${idx}`,
+      id: `single-regex-${Date.now()}-${idx}`,
       title: title,
-      source: feed.name,
+      source: feed.name || 'FashionNetwork France',
       publishedAt: formattedDate,
       url: link,
       snippet: snippet,
-      category: normalizeCategory(feed.category),
-      suggestedBrand: extractBrandFromTitle(title) || feed.name,
+      category: normalizeCategory(feed.category || '패션'),
+      suggestedBrand: extractBrandFromTitle(title) || 'FashionNetwork',
       suggestedProduct: title,
       suggestedLocation: '파리 매장 / 온라인',
       suggestedPrice: extractPriceFromSnippet(desc) || '가격 확인 필요',

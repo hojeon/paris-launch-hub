@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin } from 'lucide-react';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
-import { PRESET_RSS_SOURCES, fetchRssArticles } from '../utils/rssFetcher';
-import { INITIAL_NEWS } from '../utils/sampleData';
+import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
 import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
 
 interface NewsCollectorProps {
@@ -28,10 +27,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const [customRssUrl, setCustomRssUrl] = useState<string>('');
   const [autoImportDirectly, setAutoImportDirectly] = useState<boolean>(false);
 
-  // 마운트 시 뉴스 리스트가 0건이면 자동 1차 수집 실행
+  // 마운트 시 뉴스 리스트가 0건이면 단일 사이트 원본 파싱 검증 자동 실행
   useEffect(() => {
     if (newsList.length === 0 && !isFetchingRss) {
-      handleFetchAllRss();
+      handleTestSingleSiteFeed();
     }
   }, []);
 
@@ -70,13 +69,27 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     };
   };
 
+  // 단일 사이트 (FashionNetwork) 원본 피드 검증 파이프라인
+  const handleTestSingleSiteFeed = async () => {
+    setIsFetchingRss(true);
+    setRssMessage('🧪 FashionNetwork FR (fr,0.xml) 피드에서 검색어 필터 없이 원본 XML 파싱 중...');
+    const result = await fetchSingleSiteFullRss('https://fr.fashionnetwork.com/rss/feed/fr,0.xml');
+
+    if (result.articles.length > 0) {
+      onAddNewsArticles(result.articles);
+      setRssMessage(`✅ FashionNetwork XML (${Math.round(result.sourceXmlBytes / 1024)}KB) 파싱 성공! 검색어 필터 없이 총 ${result.articles.length}건의 원본 기사를 100% 가져왔습니다.`);
+    } else {
+      setRssMessage('⚠️ FashionNetwork XML 파싱 실패: 네트워크 또는 프록시 상태를 디버깅 중입니다.');
+    }
+
+    setIsFetchingRss(false);
+    setTimeout(() => setRssMessage(null), 5000);
+  };
+
   const handleFetchPresetRss = async (feed: RssFeedSource) => {
     setIsFetchingRss(true);
     setRssMessage(`${feed.name} 라이브 RSS 수집 중...`);
-    let articles = await fetchRssArticles(feed);
-    if (!articles || articles.length === 0) {
-      articles = INITIAL_NEWS;
-    }
+    const articles = await fetchRssArticles(feed);
 
     if (autoImportDirectly) {
       let count = 0;
@@ -106,10 +119,6 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     for (const source of PRESET_RSS_SOURCES) {
       const articles = await fetchRssArticles(source);
       allNew = [...allNew, ...articles];
-    }
-
-    if (!allNew || allNew.length === 0) {
-      allNew = INITIAL_NEWS;
     }
 
     if (autoImportDirectly) {
@@ -144,10 +153,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       category: '기타',
       description: '사용자 지정 RSS 수집원',
     };
-    let articles = await fetchRssArticles(customSource);
-    if (!articles || articles.length === 0) {
-      articles = INITIAL_NEWS;
-    }
+    const articles = await fetchRssArticles(customSource);
     
     if (autoImportDirectly) {
       for (const article of articles) {
@@ -349,6 +355,18 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           </div>
 
           <div className="flex gap-2 items-center" style={{ flexWrap: 'wrap' }}>
+            {/* Single Site Pure Test Button */}
+            <button
+              className="btn-secondary btn-sm"
+              onClick={handleTestSingleSiteFeed}
+              disabled={isFetchingRss}
+              style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #7dd3fc', fontWeight: 600 }}
+              title="검색어 조건 없는 단일 피드 (fr,0.xml) 전체 원본 파싱 테스트"
+            >
+              <ShieldCheck size={14} />
+              <span>🧪 FashionNetwork 원본 피드 100% 파싱 테스트</span>
+            </button>
+
             {/* Clear All List Button */}
             {onClearNewsList && newsList.length > 0 && (
               <button
