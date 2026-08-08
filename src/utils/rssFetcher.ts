@@ -11,12 +11,21 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     isPreset: true,
   },
   {
-    id: 'rss-google-news-paris-bool',
+    id: 'rss-google-news-paris-bool-fr',
     name: 'Google News Paris Live (프랑스어 3중 정밀 검색식)',
     url: 'https://news.google.com/rss/search?q=%28%22lancement%22+OR+%22nouveaut%C3%A9%22+OR+%22disponible%22+OR+%22exclusivit%C3%A9%22+OR+%22boutique+%C3%A9ph%C3%A9m%C3%A8re%22+OR+%22pop-up%22%29+AND+%28%22Paris%22+OR+%22France%22%29+AND+%28produit+OR+collection+OR+ouverture+OR+flagship+OR+%22avant-premi%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
     siteUrl: 'https://news.google.com',
     category: '패션',
     description: '프랑스 전 언론사 실시간 파리 런칭/신제품/팝업 속보 3중 검색식 자동 수집',
+    isPreset: true,
+  },
+  {
+    id: 'rss-google-news-paris-bool-en',
+    name: 'Google News Paris Launch (영어 3중 정밀 검색식 🇬🇧)',
+    url: 'https://news.google.com/rss/search?q=%28%22Paris+launch%22+OR+%22new+product+Paris%22+OR+%22Paris+popup+store%22+OR+%22Paris+flagship%22+OR+%22exclusive+Paris%22%29+AND+%28brand+OR+fashion+OR+beauty+OR+luxury+OR+dessert%29&hl=en-US&gl=US&ceid=US:en',
+    siteUrl: 'https://news.google.com',
+    category: '패션',
+    description: '글로벌 영문 언론사 실시간 파리 런칭/신제품/팝업 3중 영문 검색식 수집',
     isPreset: true,
   },
   {
@@ -221,9 +230,9 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
         } catch (e) {}
       }
 
-      // 5. Intelligent Field Extraction
+      // 5. Intelligent Field Extraction (Supports English + French)
       const brand = extractBrandFromTitle(title) || feedName;
-      const price = extractPriceFromSnippet(description) || '가격 확인 필요';
+      const price = extractPriceFromSnippet(description + ' ' + title) || '가격 확인 필요';
       const location = extractLocationFromText(title + ' ' + description) || '파리 매장 / 온라인';
 
       articles.push({
@@ -287,7 +296,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
       suggestedBrand: extractBrandFromTitle(title) || '파리 브랜드',
       suggestedProduct: title,
       suggestedLocation: extractLocationFromText(title + ' ' + desc) || '파리 매장 / 온라인',
-      suggestedPrice: extractPriceFromSnippet(desc) || '가격 확인 필요',
+      suggestedPrice: extractPriceFromSnippet(desc + ' ' + title) || '가격 확인 필요',
       isParsed: false,
     });
   });
@@ -297,9 +306,9 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
 
 function normalizeCategory(cat: string): '패션' | '뷰티' | '식품' | '테크' {
   if (!cat) return '패션';
-  if (cat.includes('뷰티') || cat.includes('화장품') || cat.includes('Beauté')) return '뷰티';
-  if (cat.includes('식품') || cat.includes('디저트') || cat.includes('미식')) return '식품';
-  if (cat.includes('테크') || cat.includes('IT') || cat.includes('경제')) return '테크';
+  if (cat.includes('뷰티') || cat.includes('화장품') || cat.includes('Beauté') || cat.includes('Beauty')) return '뷰티';
+  if (cat.includes('식품') || cat.includes('디저트') || cat.includes('미식') || cat.includes('Food')) return '식품';
+  if (cat.includes('테크') || cat.includes('IT') || cat.includes('경제') || cat.includes('Tech')) return '테크';
   return '패션';
 }
 
@@ -326,7 +335,7 @@ function extractBrandFromTitle(title: string): string {
 }
 
 function extractPriceFromSnippet(text: string): string | null {
-  const priceMatch = text.match(/\b(\d+[\d\s\.,]*\s*(€|Euros?|EUR))\b/i);
+  const priceMatch = text.match(/\b(\d+[\d\s\.,]*\s*(€|Euros?|EUR|\$|USD|£|GBP))\b/i);
   return priceMatch ? priceMatch[1].trim() : null;
 }
 
