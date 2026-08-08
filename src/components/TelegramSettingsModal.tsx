@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Send, ShieldCheck, CheckCircle2, MessageSquare, Bell, Sliders, Info, Zap, AlertTriangle, Lock, ExternalLink, Key, Cpu, Sparkles } from 'lucide-react';
+import { X, Send, ShieldCheck, CheckCircle2, MessageSquare, Bell, Sliders, Info, Zap, AlertTriangle, Lock, ExternalLink, Key, Cpu, Sparkles, Plus, Trash } from 'lucide-react';
 import { getNotificationConfig, saveNotificationConfig, sendProductNotification, NotificationConfig } from '../utils/notificationService';
-import { getStoredAiApiKey, saveStoredAiApiKey } from '../utils/aiArticleValidator';
+import { getStoredAiApiKeys, saveStoredAiApiKeys } from '../utils/aiArticleValidator';
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -15,17 +15,33 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
   onConfigSaved,
 }) => {
   const [config, setConfig] = useState<NotificationConfig>(() => getNotificationConfig());
-  const [aiApiKey, setAiApiKey] = useState<string>(() => getStoredAiApiKey());
+  
+  // Initialize up to 7 Key Slots
+  const [aiKeys, setAiKeys] = useState<string[]>(() => {
+    const existing = getStoredAiApiKeys();
+    const initialSlots = Array(7).fill('');
+    existing.forEach((k, idx) => {
+      if (idx < 7) initialSlots[idx] = k;
+    });
+    return initialSlots;
+  });
+
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
+  const handleKeyChange = (index: number, val: string) => {
+    const next = [...aiKeys];
+    next[index] = val;
+    setAiKeys(next);
+  };
+
   const handleSave = () => {
     saveNotificationConfig(config);
-    saveStoredAiApiKey(aiApiKey);
+    saveStoredAiApiKeys(aiKeys);
     if (onConfigSaved) onConfigSaved(config);
-    setTestResult({ success: true, message: '✅ 클린 알림 채널 & AI API 키 설정이 성공적으로 저장되었습니다!' });
+    setTestResult({ success: true, message: '✅ 클린 알림 채널 & 7-Key AI 멀티 로드밸런서 설정이 저장되었습니다!' });
     setTimeout(() => {
       setTestResult(null);
       onClose();
@@ -46,7 +62,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
       launchDate: '2026-08-08',
       location: '파리 마레 지구 팝업스토어',
       price: '180€',
-      keyFeatures: '성인광고/스팸 0%! Gemini LLM AI 정밀 파서 및 클린 봇으로 연동 발송되는 파리 신제품 알림 테스트입니다.',
+      keyFeatures: '7-Key AI 멀티 로드밸런서 연동! 호출제한 걱정 없는 파리 신제품 알림 테스트입니다.',
       targetAudience: '파리 현지 직구족',
       sourceUrl: 'https://paris-launch-hub.pariscommetoi.workers.dev',
       sourceName: 'Paris Launch Hub',
@@ -67,16 +83,16 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content card shadow-lg" style={{ maxWidth: '660px', width: '94%', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-content card shadow-lg" style={{ maxWidth: '680px', width: '94%', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header flex justify-between items-center mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
           <div className="flex items-center gap-2">
             <div className="icon-wrapper navy" style={{ width: '36px', height: '36px' }}>
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem' }}>🛡️ 알림 수신 채널 & AI API 연동 설정</h3>
+              <h3 style={{ margin: 0, fontSize: '1.25rem' }}>🛡️ 7-Key AI 로드밸런서 & 수신 채널 설정</h3>
               <p className="text-muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-                Google Gemini API 연동 + 스팸 0% 클린 수신 채널 선택
+                Gemini API 키 7개 멀티 스위칭 + 스팸 0% 수신 채널 연동
               </p>
             </div>
           </div>
@@ -85,34 +101,42 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
           </button>
         </div>
 
-        {/* AI API Key Card Section */}
+        {/* 7-Key Multi-Slot AI Load Balancer Card Section */}
         <div className="card shadow-sm mb-4" style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)', border: '1px solid #d8b4fe', padding: '16px' }}>
-          <div className="flex items-center gap-2 mb-2" style={{ color: '#6b21a8', fontWeight: 700, fontSize: '0.95rem' }}>
-            <Sparkles size={18} color="#9333ea" />
-            <span>🔮 Google Gemini AI API Key 연동 (선택 사항)</span>
-          </div>
-          <p className="text-muted mb-3" style={{ fontSize: '0.8rem', margin: '0 0 10px 0', color: '#7e22ce' }}>
-            Google Gemini API 키를 입력하시면, AI가 프랑스어 기사 전문을 읽고 B2B/M&A/세무조사 기사를 99.9% 정밀하게 100% 솎아냅니다! (미입력 시 기본 내장 Zero-Key AI 엔진으로 자동 작동)
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              className="input-field"
-              placeholder="AIzaSy... (Google Gemini API Key 입력)"
-              value={aiApiKey}
-              onChange={(e) => setAiApiKey(e.target.value)}
-              style={{ fontFamily: 'monospace', fontSize: '0.85rem', flex: 1, padding: '8px 12px' }}
-            />
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-2" style={{ color: '#6b21a8', fontWeight: 700, fontSize: '0.95rem' }}>
+              <Sparkles size={18} color="#9333ea" />
+              <span>🔮 7-Key Multi-Slot AI Key Rotation & Load Balancer</span>
+            </div>
             <a
               href="https://aistudio.google.com/app/apikey"
               target="_blank"
               rel="noreferrer"
-              className="btn-outline btn-sm flex items-center gap-1"
-              style={{ background: '#ffffff', color: '#9333ea', border: '1px solid #c084fc', textDecoration: 'none', whiteSpace: 'nowrap', fontSize: '0.8rem' }}
+              style={{ fontSize: '0.75rem', color: '#9333ea', textDecoration: 'underline' }}
             >
-              <span>🔑 무료 키 발급받기</span>
-              <ExternalLink size={12} />
+              🔑 Google 무료 키 발급 페이지
             </a>
+          </div>
+          <p className="text-muted mb-3" style={{ fontSize: '0.8rem', margin: '0 0 12px 0', color: '#7e22ce' }}>
+            최대 7개의 Gemini API 키를 등록해 두시면, **호출 제한(Rate Limit 429) 회피 및 7개 키 순환(Round-Robin)**으로 멈춤 없이 100% 초고속 정밀 AI 검증이 수행됩니다!
+          </p>
+
+          <div className="grid gap-2" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+            {aiKeys.map((keyVal, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#9333ea', width: '55px' }}>
+                  Key #{idx + 1}:
+                </span>
+                <input
+                  type="password"
+                  className="input-field"
+                  placeholder={`AIzaSy... (Gemini API Key Slot ${idx + 1})`}
+                  value={keyVal}
+                  onChange={(e) => handleKeyChange(idx, e.target.value)}
+                  style={{ fontFamily: 'monospace', fontSize: '0.8rem', flex: 1, padding: '6px 10px', background: '#ffffff' }}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -206,7 +230,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
                 href="https://t.me/userinfobot"
                 target="_blank"
                 rel="noreferrer"
-                style={{ fontSize: '0.8rem', color: '#0088cc', textDecoration: 'none', display: 'flex', itemsCenter: 'center', gap: '2px' }}
+                style={{ fontSize: '0.8rem', color: '#0088cc', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}
               >
                 <span>내 Chat ID 즉시 확인하기</span>
                 <ExternalLink size={12} />

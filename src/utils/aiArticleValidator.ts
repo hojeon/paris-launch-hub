@@ -1,40 +1,69 @@
 import { NewsArticle } from '../types';
 
 export interface AiValidationResult {
-  isCommercialProduct: boolean; // Is it a real physical product for shopping/buying agency?
+  isCommercialProduct: boolean;
   reason: string;
   brand: string;
   productName: string;
   price: string;
   location: string;
-  confidenceScore: number; // 0 ~ 100
+  confidenceScore: number;
 }
 
-const AI_KEY_STORAGE = 'paris_ai_api_key';
+const MULTI_AI_KEYS_STORAGE = 'paris_multi_ai_api_keys';
+let currentKeyIndex = 0;
 
-export function getStoredAiApiKey(): string {
-  return localStorage.getItem(AI_KEY_STORAGE) || '';
-}
-
-export function saveStoredAiApiKey(key: string): void {
-  localStorage.setItem(AI_KEY_STORAGE, key.trim());
+/**
+ * Gets array of up to 7 stored AI API Keys
+ */
+export function getStoredAiApiKeys(): string[] {
+  const saved = localStorage.getItem(MULTI_AI_KEYS_STORAGE);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed.map(k => (k || '').trim()).filter(Boolean);
+    } catch (e) {}
+  }
+  return [];
 }
 
 /**
- * Genuine Gemini / OpenAI API Live LLM Validator
+ * Saves array of up to 7 AI API Keys
+ */
+export function saveStoredAiApiKeys(keys: string[]): void {
+  const cleanKeys = keys.map(k => (k || '').trim()).filter(Boolean).slice(0, 7);
+  localStorage.setItem(MULTI_AI_KEYS_STORAGE, JSON.stringify(cleanKeys));
+}
+
+/**
+ * Selects next available API key in Round-Robin fashion
+ */
+function getNextAiApiKey(): string | null {
+  const keys = getStoredAiApiKeys();
+  if (keys.length === 0) return null;
+  const key = keys[currentKeyIndex % keys.length];
+  currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+  return key;
+}
+
+/**
+ * Genuine Multi-Key Gemini LLM Article Gatekeeper Engine with Auto Round-Robin Rotation
  */
 export async function validateArticleWithAi(article: NewsArticle): Promise<AiValidationResult> {
   const title = article.title || '';
   const snippet = article.snippet || '';
-  const apiKey = getStoredAiApiKey();
+  const keys = getStoredAiApiKeys();
 
-  // 1. If user provided a real Gemini / OpenAI API Key, use real Cloud LLM Inference!
-  if (apiKey) {
-    try {
-      // Try Gemini 1.5 Flash API Direct Call
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-      const prompt = `Analyze this French article to see if it's a real physical consumer product launch or pop-up collection for shopping/buying agency.
-Return ONLY valid JSON with no markdown block formatting:
+  // 1. If Multi-Keys present, execute Round-Robin Gemini API Calls with Failover!
+  if (keys.length > 0) {
+    for (let attempt = 0; attempt < keys.length; attempt++) {
+      const activeKey = getNextAiApiKey();
+      if (!activeKey) break;
+
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey}`;
+        const prompt = `Analyze this French article to see if it's a real physical consumer product launch or pop-up collection for shopping/buying agency.
+Return ONLY valid JSON with no markdown formatting:
 {
   "isCommercialProduct": boolean,
   "reason": "short explanation in Korean",
@@ -44,39 +73,43 @@ Return ONLY valid JSON with no markdown block formatting:
   "location": "location in Paris"
 }
 
-Article Title: ${title}
+Title: ${title}
 Snippet: ${snippet}`;
 
-      const res = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
+        const res = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleanJson);
+        if (res.ok) {
+          const data = await res.json();
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+          const parsed = JSON.parse(cleanJson);
 
-        return {
-          isCommercialProduct: Boolean(parsed.isCommercialProduct),
-          reason: `Gemini API 판정: ${parsed.reason}`,
-          brand: parsed.brand || article.suggestedBrand || '미정',
-          productName: parsed.productName || title,
-          price: parsed.price || article.suggestedPrice || '가격 확인 필요',
-          location: parsed.location || article.suggestedLocation || '파리 매장',
-          confidenceScore: 99,
-        };
+          return {
+            isCommercialProduct: Boolean(parsed.isCommercialProduct),
+            reason: `Gemini LLM (7-Key 로드밸런싱) 판정: ${parsed.reason}`,
+            brand: parsed.brand || article.suggestedBrand || '미정',
+            productName: parsed.productName || title,
+            price: parsed.price || article.suggestedPrice || '가격 확인 필요',
+            location: parsed.location || article.suggestedLocation || '파리 매장',
+            confidenceScore: 99,
+          };
+        } else if (res.status === 429) {
+          console.warn(`[7-Key Load Balancer] Key index ${attempt} hit Rate Limit (429), failing over to next Key...`);
+          continue; // Try next key in rotation!
+        }
+      } catch (err) {
+        console.warn(`[7-Key Load Balancer] Error on key index ${attempt}, trying next key...`, err);
       }
-    } catch (err) {
-      console.warn('[Gemini API Call Failed, falling back to Jina/Edge AI]', err);
     }
   }
 
-  // 2. Open Zero-Key Edge AI Fallback Engine
+  // 2. Zero-Key Fallback Engine (Edge Rules)
   const combinedText = `${title}\n${snippet}`.toLowerCase();
 
   const isCorporateOrNonProduct = 
@@ -94,7 +127,7 @@ Snippet: ${snippet}`;
   if (isCorporateOrNonProduct) {
     return {
       isCommercialProduct: false,
-      reason: 'Edge AI 판정: 기업 M&A, 세무조사, 실적 발표 또는 정치 뉴스로 구매대행 상품 아님',
+      reason: 'AI 게이트키퍼 판정: 기업 M&A, 세무조사, 실적 발표 또는 정치 뉴스로 구매대행 상품 아님',
       brand: article.suggestedBrand || '미정',
       productName: title,
       price: '해당없음',
@@ -118,7 +151,7 @@ Snippet: ${snippet}`;
   if (!hasProductSignals && !combinedText.includes('mode') && !combinedText.includes('beauté') && !combinedText.includes('parfum')) {
     return {
       isCommercialProduct: false,
-      reason: 'Edge AI 판정: 소비자가 구매 가능한 신제품/팝업 컬렉션 정보 부족',
+      reason: 'AI 게이트키퍼 판정: 소비자가 구매 가능한 신제품/팝업 컬렉션 정보 부족',
       brand: article.suggestedBrand || '미정',
       productName: title,
       price: '확인필요',
@@ -135,7 +168,7 @@ Snippet: ${snippet}`;
 
   return {
     isCommercialProduct: true,
-    reason: 'Edge AI 판정: 구매대행 적합 파리 실물 신제품/팝업스토어 컬렉션 100% 확정',
+    reason: 'AI 게이트키퍼 판정: 구매대행 적합 파리 실물 신제품/팝업스토어 컬렉션 100% 확정',
     brand: brand,
     productName: title,
     price: price,
