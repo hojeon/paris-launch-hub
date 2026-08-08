@@ -33,7 +33,7 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
     name: 'Le Parisien',
     url: 'https://www.leparisien.fr/arc/outboundfeeds/rss/',
     siteUrl: 'https://www.leparisien.fr',
-    category: '라이프스타일',
+    category: '패션',
     description: '파리 현지 라이프스타일, 트렌드 & 팝업 속보',
     isPreset: true,
   },
@@ -67,13 +67,36 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
       if (text && text.trim().length > 50 && (text.includes('<rss') || text.includes('<feed') || text.includes('<xml') || text.includes('<item') || text.includes('<entry>'))) {
         xmlText = text;
         console.log(`[RSS Engine] Success via Worker Proxy (${xmlText.length} bytes)`);
+      } else {
+        // Fallback: If Worker returned JSON items directly from fallback
+        try {
+          const parsedJson = JSON.parse(text);
+          if (parsedJson.items && Array.isArray(parsedJson.items)) {
+            return parsedJson.items;
+          }
+        } catch (e) {}
       }
     }
   } catch (err: any) {
     fetchError += `WorkerProxy: ${err.message}; `;
   }
 
-  // Attempt 2: AllOrigins Raw Proxy Fallback
+  // Attempt 2: Direct /api/news Endpoint Call
+  try {
+    const res = await fetch('/api/news');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((item: any, idx: number) => ({
+          ...item,
+          id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+          category: normalizeCategory(item.category || feed.category),
+        }));
+      }
+    }
+  } catch (e) {}
+
+  // Attempt 3: AllOrigins Raw Proxy Fallback
   if (!xmlText) {
     try {
       const rawProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(feed.url)}`;
@@ -87,39 +110,6 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
       }
     } catch (err: any) {
       fetchError += `AllOrigins: ${err.message}; `;
-    }
-  }
-
-  // Attempt 3: CorsProxy.io Proxy Fallback
-  if (!xmlText) {
-    try {
-      const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(feed.url)}`;
-      const res = await fetch(corsProxyUrl);
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.trim().length > 50 && (text.includes('<rss') || text.includes('<feed') || text.includes('<xml') || text.includes('<item') || text.includes('<entry>'))) {
-          xmlText = text;
-          console.log(`[RSS Engine] Success via CorsProxy.io (${xmlText.length} bytes)`);
-        }
-      }
-    } catch (err: any) {
-      fetchError += `CorsProxy: ${err.message}; `;
-    }
-  }
-
-  // Attempt 4: Direct Fetch (Works if target feed has Access-Control-Allow-Origin: *)
-  if (!xmlText) {
-    try {
-      const res = await fetch(feed.url);
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.trim().length > 50) {
-          xmlText = text;
-          console.log(`[RSS Engine] Success via Direct Fetch (${xmlText.length} bytes)`);
-        }
-      }
-    } catch (err: any) {
-      fetchError += `DirectFetch: ${err.message}; `;
     }
   }
 
@@ -218,7 +208,7 @@ function parseRawXmlToArticles(xmlString: string, feed: RssFeedSource): NewsArti
         publishedAt: formattedDate,
         url: link,
         snippet: snippet,
-        category: feed.category,
+        category: normalizeCategory(feed.category),
         suggestedBrand: brand,
         suggestedProduct: title,
         suggestedLocation: '파리 매장 / 온라인',
@@ -271,7 +261,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: RssFeedSource): News
       publishedAt: formattedDate,
       url: link,
       snippet: snippet,
-      category: feed.category,
+      category: normalizeCategory(feed.category),
       suggestedBrand: extractBrandFromTitle(title) || feed.name,
       suggestedProduct: title,
       suggestedLocation: '파리 매장 / 온라인',
@@ -281,6 +271,14 @@ function parseXmlWithRegexFallback(xmlString: string, feed: RssFeedSource): News
   });
 
   return articles;
+}
+
+function normalizeCategory(cat: string): '패션' | '뷰티' | '식품' | '테크' {
+  if (!cat) return '패션';
+  if (cat.includes('뷰티') || cat.includes('화장품') || cat.includes('Beauté')) return '뷰티';
+  if (cat.includes('식품') || cat.includes('디저트') || cat.includes('미식')) return '식품';
+  if (cat.includes('테크') || cat.includes('IT') || cat.includes('경제')) return '테크';
+  return '패션';
 }
 
 function stripHtmlTags(str: string): string {
