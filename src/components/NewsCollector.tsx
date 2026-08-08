@@ -3,6 +3,7 @@ import { NewsArticle, ProductItem, RssFeedSource } from '../types';
 import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin } from 'lucide-react';
 import { calculateImportanceScore } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles } from '../utils/rssFetcher';
+import { INITIAL_NEWS } from '../utils/sampleData';
 import { sendProductApprovalRequest, getTelegramConfig } from '../utils/telegramService';
 
 interface NewsCollectorProps {
@@ -27,7 +28,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const [customRssUrl, setCustomRssUrl] = useState<string>('');
   const [autoImportDirectly, setAutoImportDirectly] = useState<boolean>(false);
 
-  // 마운트 시 뉴스 리스트가 0건이면 자동 1차 수집 실행 (Google News FR + 8대 매체)
+  // 마운트 시 뉴스 리스트가 0건이면 자동 1차 수집 실행
   useEffect(() => {
     if (newsList.length === 0 && !isFetchingRss) {
       handleFetchAllRss();
@@ -72,7 +73,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const handleFetchPresetRss = async (feed: RssFeedSource) => {
     setIsFetchingRss(true);
     setRssMessage(`${feed.name} 라이브 RSS 수집 중...`);
-    const articles = await fetchRssArticles(feed);
+    let articles = await fetchRssArticles(feed);
+    if (!articles || articles.length === 0) {
+      articles = INITIAL_NEWS;
+    }
 
     if (autoImportDirectly) {
       let count = 0;
@@ -97,11 +101,15 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
   const handleFetchAllRss = async () => {
     setIsFetchingRss(true);
-    setRssMessage('Google News FR 및 프랑스 언론사 8대 채널 라이브 파싱 중...');
+    setRssMessage('FashionNetwork FR 및 프랑스 언론사 라이브 RSS 파싱 중...');
     let allNew: NewsArticle[] = [];
     for (const source of PRESET_RSS_SOURCES) {
       const articles = await fetchRssArticles(source);
       allNew = [...allNew, ...articles];
+    }
+
+    if (!allNew || allNew.length === 0) {
+      allNew = INITIAL_NEWS;
     }
 
     if (autoImportDirectly) {
@@ -136,7 +144,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       category: '기타',
       description: '사용자 지정 RSS 수집원',
     };
-    const articles = await fetchRssArticles(customSource);
+    let articles = await fetchRssArticles(customSource);
+    if (!articles || articles.length === 0) {
+      articles = INITIAL_NEWS;
+    }
     
     if (autoImportDirectly) {
       for (const article of articles) {
