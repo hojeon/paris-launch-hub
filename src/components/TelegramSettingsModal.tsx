@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Send, ShieldCheck, CheckCircle2, MessageSquare, Bell, Sliders, Info, Zap } from 'lucide-react';
+import { X, Send, ShieldCheck, CheckCircle2, MessageSquare, Bell, Sliders, Info, Zap, AlertTriangle, Lock } from 'lucide-react';
 import { getNotificationConfig, saveNotificationConfig, sendProductNotification, NotificationConfig } from '../utils/notificationService';
 
 interface NotificationSettingsModalProps {
@@ -43,7 +43,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
       launchDate: '2026-08-08',
       location: '파리 마레 지구 팝업스토어',
       price: '180€',
-      keyFeatures: '스팸/광고 0%! 슬랙 및 디스코드로 즉시 발송되는 파리 신제품 알림 테스트입니다.',
+      keyFeatures: '성인광고/스팸 0%! 슬랙, 디스코드, 클린 텔레그램으로 즉시 발송되는 파리 신제품 알림 테스트입니다.',
       targetAudience: '파리 현지 직구족',
       sourceUrl: 'https://paris-launch-hub.pariscommetoi.workers.dev',
       sourceName: 'Paris Launch Hub',
@@ -64,16 +64,16 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }}>
-      <div className="modal-content card shadow-lg" style={{ maxWidth: '600px', width: '90%', padding: '24px' }}>
+      <div className="modal-content card shadow-lg" style={{ maxWidth: '640px', width: '92%', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="modal-header flex justify-between items-center mb-4" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
           <div className="flex items-center gap-2">
             <div className="icon-wrapper navy" style={{ width: '36px', height: '36px' }}>
-              <Bell size={20} />
+              <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>🛡️ 100% 클린 무광고 알림 채널 설정</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem' }}>🛡️ 성인광고/스팸 0% 클린 알림 채널 설정</h3>
               <p className="text-muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-                포르노/스팸 광고 0%! 슬랙(Slack) & 디스코드(Discord) 1초 연동
+                가짜 BotFather 피싱 봇 위험 없는 안전한 알림 수신 채널 선택
               </p>
             </div>
           </div>
@@ -88,15 +88,15 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
             onClick={() => setConfig({ ...config, channelType: 'slack' })}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              padding: '10px 8px',
               borderRadius: '6px',
               border: 'none',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
               background: config.channelType === 'slack' ? '#ffffff' : 'transparent',
               color: config.channelType === 'slack' ? '#4a154b' : '#64748b',
-              boxShadow: config.channelType === 'slack' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              boxShadow: config.channelType === 'slack' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
             }}
           >
             💬 Slack 슬랙 (강추/광고0%)
@@ -106,44 +106,47 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
             onClick={() => setConfig({ ...config, channelType: 'discord' })}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              padding: '10px 8px',
               borderRadius: '6px',
               border: 'none',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
               background: config.channelType === 'discord' ? '#ffffff' : 'transparent',
               color: config.channelType === 'discord' ? '#5865f2' : '#64748b',
-              boxShadow: config.channelType === 'discord' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              boxShadow: config.channelType === 'discord' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            🎮 Discord 디스코드 (추천)
+            🎮 Discord 디스코드 (강추)
           </button>
 
           <button
             onClick={() => setConfig({ ...config, channelType: 'telegram' })}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              padding: '10px 8px',
               borderRadius: '6px',
               border: 'none',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
               background: config.channelType === 'telegram' ? '#ffffff' : 'transparent',
               color: config.channelType === 'telegram' ? '#0088cc' : '#64748b',
-              boxShadow: config.channelType === 'telegram' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              boxShadow: config.channelType === 'telegram' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            ✈️ Telegram (기존)
+            ✈️ Telegram 텔레그램
           </button>
         </div>
 
         {/* Tab 1: Slack Webhook Settings */}
         {config.channelType === 'slack' && (
           <div className="form-group mb-4">
+            <div className="alert-box success mb-3" style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', fontSize: '0.85rem' }}>
+              ✨ <strong>Slack(슬랙)은 BotFather나 성인 광고 문제가 100% 존재하지 않는 청정 채널입니다!</strong>
+            </div>
             <label className="input-label" style={{ fontWeight: 600, color: '#4a154b' }}>
-              💬 Slack 수신용 Webhook URL 주소 입력:
+              💬 Slack 수신용 Incoming Webhook URL 주소 입력:
             </label>
             <input
               type="text"
@@ -154,7 +157,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
               style={{ fontFamily: 'monospace', fontSize: '0.85rem', padding: '10px' }}
             />
             <div className="alert-box info mt-2" style={{ background: '#fdf4ff', border: '1px solid #f5d0fe', color: '#701a75', fontSize: '0.8rem' }}>
-              💡 <strong>Slack 연결 방법:</strong> Slack 앱에서 내 채널 우클릭 ➔ 앱 추가 ➔ <strong>"Incoming WebHooks"</strong> 선택 후 생성된 URL을 위 상자에 붙여넣으시면 스팸 광고 0%의 알림이 전송됩니다!
+              💡 <strong>Slack 연결 1초 안내:</strong> 슬랙 내 채널 우클릭 ➔ 앱 추가 ➔ <strong>"Incoming WebHooks"</strong> 선택 후 생성된 URL을 위 상자에 붙여넣으세요!
             </div>
           </div>
         )}
@@ -162,6 +165,9 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
         {/* Tab 2: Discord Webhook Settings */}
         {config.channelType === 'discord' && (
           <div className="form-group mb-4">
+            <div className="alert-box success mb-3" style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', fontSize: '0.85rem' }}>
+              ✨ <strong>Discord(디스코드)는 봇 프로필 성인광고 덮어쓰기 위험이 0%인 100% 무료 개인 채널입니다!</strong>
+            </div>
             <label className="input-label" style={{ fontWeight: 600, color: '#5865f2' }}>
               🎮 Discord 수신용 Webhook URL 주소 입력:
             </label>
@@ -174,15 +180,25 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
               style={{ fontFamily: 'monospace', fontSize: '0.85rem', padding: '10px' }}
             />
             <div className="alert-box info mt-2" style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', fontSize: '0.8rem' }}>
-              💡 <strong>Discord 연결 방법:</strong> 디스코드 내 개인 서버 ⚙️ 채널 설정 ➔ 연동(Integrations) ➔ <strong>"웹후크 만들기(Create Webhook)"</strong> ➔ 웹후크 URL 복사 후 위에 붙여넣으세요!
+              💡 <strong>Discord 연결 1초 안내:</strong> 개인 서버 ⚙️ 채널 설정 ➔ 연동 ➔ <strong>"웹후크 만들기"</strong> 후 웹후크 URL을 복사하여 위에 붙여넣으세요!
             </div>
           </div>
         )}
 
-        {/* Tab 3: Telegram Settings */}
+        {/* Tab 3: Telegram Settings & BotFather Warning/Lock Guide */}
         {config.channelType === 'telegram' && (
           <div className="form-group mb-4">
-            <label className="input-label" style={{ fontWeight: 600 }}>Telegram Bot Token:</label>
+            {/* Warning Box for Fake BotFather Spam */}
+            <div className="alert-box error mb-3" style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#9f1239', fontSize: '0.8rem' }}>
+              <div className="flex items-center gap-1 font-bold mb-1" style={{ fontSize: '0.85rem' }}>
+                <AlertTriangle size={16} /> 텔레그램 가짜 BotFather 성인광고 피싱 주의 안내
+              </div>
+              텔레그램 검색창의 가짜 봇 계정들이 봇 프로필을 포르노/성인 피싱 광고로 강제 덮어쓰는 문제가 있습니다.<br />
+              - <strong>공식 BotFather 구분법:</strong> 반드시 이름 옆에 <strong>파란색 공식 인증 마크(🔵 Verified)</strong>가 붙어있는 계정만 사용하세요.<br />
+              - <strong>해결책:</strong> 아래에 미리 제공된 <strong>100% 클린 기본 봇 토큰</strong>을 그대로 사용하시거나, 위 탭의 <strong>[Slack 슬랙] / [Discord 디스코드]</strong> 사용을 권장합니다!
+            </div>
+
+            <label className="input-label" style={{ fontWeight: 600 }}>Telegram Bot Token (클린 기본 봇 토큰 제공됨):</label>
             <input
               type="text"
               className="input-field mb-2"
@@ -215,7 +231,7 @@ export const TelegramSettingsModal: React.FC<NotificationSettingsModalProps> = (
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <Send size={14} />
-            <span>{isTesting ? '알림 테스트 중...' : '🧪 테스트 알림 발송하기'}</span>
+            <span>{isTesting ? '알림 테스트 중...' : '🧪 클린 테스트 알림 발송하기'}</span>
           </button>
 
           <div className="flex gap-2">
