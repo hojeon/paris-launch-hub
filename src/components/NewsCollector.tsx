@@ -107,7 +107,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
   const handleFetchAllRss = async () => {
     setIsFetchingRss(true);
-    setRssMessage('FashionNetwork FR 및 프랑스 언론사 라이브 RSS 파싱 중...');
+    setRssMessage('FashionNetwork FR 및 프랑스/영문 언론사 라이브 RSS 3중 검색식 파싱 중...');
     let allNew: NewsArticle[] = [];
     for (const source of PRESET_RSS_SOURCES) {
       const articles = await fetchRssArticles(source);
@@ -128,7 +128,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       setRssMessage(`⚡ 총 ${count}개의 최신 파리 기사가 DB Inbox에 자동 등록 완료되었습니다!`);
     } else {
       onAddNewsArticles(allNew);
-      setRssMessage(`총 ${allNew.length}개의 프랑스 실시간 속보 기사를 성공적으로 수집했습니다!`);
+      setRssMessage(`총 ${allNew.length}개의 프랑스 및 영문 실시간 속보 기사를 성공적으로 수집했습니다!`);
     }
 
     setIsFetchingRss(false);
@@ -200,24 +200,25 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     { name: '#madeinfrance', desc: '메이드 인 프랑스', insta: 'https://www.instagram.com/explore/tags/madeinfrance/', tiktok: 'https://www.tiktok.com/tag/madeinfrance', linkedin: 'https://www.linkedin.com/feed/hashtag/?keywords=madeinfrance' },
   ];
 
-  // 정밀 키워드 프리셋 12종
+  // 정밀 키워드 프리셋 14종
   const presetQueries = [
+    { label: '영어 3중 고급 (최상급)', query: `("Paris" OR "French") AND ("new collection" OR "product launch" OR "flagship store" OR "pop-up store") AND (fashion OR beauty OR luxury)` },
+    { label: '영어 팝업/리미티드', query: `("Paris" OR "Parisian") AND ("popup" OR "pop-up" OR "boutique opening" OR "limited edition") AND (brand OR designer)` },
+    { label: '영어 패션위크', query: `("Paris Fashion Week" OR "Paris flagship") AND ("new line" OR "unveiled" OR "launches")` },
+    { label: '프랑스어 3중 고급', query: `("lancement" OR "nouveauté" OR "disponible" OR "exclusivité") AND ("Paris" OR "France") AND (produit OR collection)` },
+    { label: '프랑스어 팝업스토어', query: `"boutique éphémère" Paris nouveauté` },
+    { label: '프랑스 공식출시', query: `"disponible en France" nouveau` },
     { label: '영어 기본', query: `"Paris launch" new product` },
     { label: '프랑스어 기본', query: `"lancement à Paris" produit` },
-    { label: '프랑스어 신제품', query: `"sortie à Paris" nouveauté` },
     { label: '파리 플래그십', query: `"Paris flagship store" new product` },
-    { label: '파리 팝업스토어', query: `"boutique éphémère" Paris` },
-    { label: '프랑스 공식출시', query: `"disponible en France" nouveau` },
-    { label: '패션위크 런칭', query: `"Paris Fashion Week" new product` },
-    { label: '뷰티 파리', query: `beauty Paris launch` },
-    { label: '테크 파리', query: `tech Paris launch` },
-    { label: '미식/디저트', query: `gastronomie Paris nouveauté` },
+    { label: '뷰티 영문', query: `beauty Paris launch new product` },
     { label: '뷰티 프랑스어', query: `beauté "lancement à Paris"` },
-    { label: '파리 독점공개', query: `"exclusivité Paris" produit` },
+    { label: '디저트/미식 영문', query: `pastry gourmet Paris launch` },
   ];
 
-  // 고급 3중 정밀 Boolean 검색식
-  const recommendedBoolQuery = `("lancement" OR "nouveauté" OR "disponible" OR "exclusivité" OR "boutique éphémère" OR "pop-up") AND ("Paris" OR "France") AND (produit OR collection OR ouverture OR flagship OR "avant-première")`;
+  // 고급 3중 정밀 Boolean 검색식 (프랑스어 & 영어 최상급)
+  const recommendedBoolQueryFr = `("lancement" OR "nouveauté" OR "disponible" OR "exclusivité" OR "boutique éphémère" OR "pop-up") AND ("Paris" OR "France") AND (produit OR collection OR ouverture OR flagship OR "avant-première")`;
+  const recommendedBoolQueryEn = `("Paris" OR "French") AND ("new collection" OR "product launch" OR "flagship store" OR "pop-up store" OR "exclusive release" OR "capsule collection") AND (fashion OR beauty OR luxury OR footwear OR jewelry)`;
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -243,8 +244,8 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="card-header">
             <div className="icon-wrapper gold"><Search size={20} /></div>
             <div>
-              <h3>Google Alerts & 정밀 키워드 조합기 (12종)</h3>
-              <p className="text-muted">한국어·영어·프랑스어 파리 특화 쿼리로 수집 정확도를 극대화하세요.</p>
+              <h3>Google Alerts & 정밀 키워드 조합기 (영어/프랑스어 14종)</h3>
+              <p className="text-muted">글로벌 명품 에이전시 특화 3중 영문/프랑스어 쿼리로 최신 속보 수집</p>
             </div>
           </div>
 
@@ -258,18 +259,32 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             ))}
           </div>
 
-          <div className="bool-query-box">
+          <div className="bool-query-box" style={{ marginBottom: '8px' }}>
             <div className="bool-title">
-              <span>💡 프랑스어 파리 전용 고급 3중 정밀 검색식</span>
+              <span>🇬🇧 영어 파리 전용 최상급 3중 정밀 검색식 (권장)</span>
               <button 
                 className="btn-text" 
-                onClick={() => handleCopy(recommendedBoolQuery, 'boolean')}
+                onClick={() => handleCopy(recommendedBoolQueryEn, 'bool_en')}
               >
-                {copiedQuery === 'boolean' ? <Check size={14} /> : <Copy size={14} />}
-                <span>검색식 복사</span>
+                {copiedQuery === 'bool_en' ? <Check size={14} /> : <Copy size={14} />}
+                <span>영문 검색식 복사</span>
               </button>
             </div>
-            <textarea readOnly value={recommendedBoolQuery} className="code-textarea" style={{ height: '65px' }} />
+            <textarea readOnly value={recommendedBoolQueryEn} className="code-textarea" style={{ height: '55px' }} />
+          </div>
+
+          <div className="bool-query-box">
+            <div className="bool-title">
+              <span>🇫🇷 프랑스어 파리 전용 고급 3중 정밀 검색식</span>
+              <button 
+                className="btn-text" 
+                onClick={() => handleCopy(recommendedBoolQueryFr, 'bool_fr')}
+              >
+                {copiedQuery === 'bool_fr' ? <Check size={14} /> : <Copy size={14} />}
+                <span>불문 검색식 복사</span>
+              </button>
+            </div>
+            <textarea readOnly value={recommendedBoolQueryFr} className="code-textarea" style={{ height: '55px' }} />
           </div>
         </div>
 
@@ -283,7 +298,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             </div>
           </div>
 
-          <div className="media-grid" style={{ maxHeight: '330px', overflowY: 'auto', paddingRight: '4px' }}>
+          <div className="media-grid" style={{ maxHeight: '410px', overflowY: 'auto', paddingRight: '4px' }}>
             {mediaList.map((media, idx) => (
               <a 
                 key={idx} 

@@ -12,8 +12,8 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
   {
     id: 'rss-google-news-paris-bool-fr',
-    name: 'Google News Paris Live (프랑스어 3중 정밀 검색식)',
-    url: 'https://news.google.com/rss/search?q=%28%22lancement%22+OR+%22nouveaut%C3%A9%22+OR+%22disponible%22+OR+%22exclusivit%C3%A9%22+OR+%22boutique+%C3%A9ph%C3%A9m%C3%A8re%22+OR+%22pop-up%22%29+AND+%28%22Paris%22+OR+%22France%22%29+AND+%28produit+OR+collection+OR+ouverture+OR+flagship+OR+%22avant-premi%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
+    name: 'Google News Paris Live (프랑스어 3중 정밀 검색식 🇫🇷)',
+    url: 'https://news.google.com/rss/search?q=%28%22lancement%22+OR+%22nouveaut%C3%A9%22+OR+%22disponible%22+OR+%22exclusivit%C3%A9%22+OR+%22boutique+%C3%A9ph%C3%A8re%22+OR+%22pop-up%22%29+AND+%28%22Paris%22+OR+%22France%22%29+AND+%28produit+OR+collection+OR+ouverture+OR+flagship+OR+%22avant-premi%C3%A8re%22%29&hl=fr&gl=FR&ceid=FR:fr',
     siteUrl: 'https://news.google.com',
     category: '패션',
     description: '프랑스 전 언론사 실시간 파리 런칭/신제품/팝업 속보 3중 검색식 자동 수집',
@@ -21,8 +21,8 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
   {
     id: 'rss-google-news-paris-bool-en',
-    name: 'Google News Paris Launch (영어 3중 정밀 검색식 🇬🇧)',
-    url: 'https://news.google.com/rss/search?q=%28%22Paris+launch%22+OR+%22new+product+Paris%22+OR+%22Paris+popup+store%22+OR+%22Paris+flagship%22+OR+%22exclusive+Paris%22%29+AND+%28brand+OR+fashion+OR+beauty+OR+luxury+OR+dessert%29&hl=en-US&gl=US&ceid=US:en',
+    name: 'Google News Paris Launch (영어 최상급 3중 검색식 🇬🇧)',
+    url: 'https://news.google.com/rss/search?q=%28%22Paris%22+OR+%22French%22%29+AND+%28%22new+collection%22+OR+%22product+launch%22+OR+%22flagship+store%22+OR+%22pop-up+store%22+OR+%22exclusive+release%22+OR+%22capsule+collection%22%29+AND+%28fashion+OR+beauty+OR+luxury+OR+footwear+OR+jewelry%29&hl=en-US&gl=US&ceid=US:en',
     siteUrl: 'https://news.google.com',
     category: '패션',
     description: '글로벌 영문 언론사 실시간 파리 런칭/신제품/팝업 3중 영문 검색식 수집',
