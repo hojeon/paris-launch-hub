@@ -4,6 +4,7 @@ const STORAGE_KEY = 'paris_telegram_config';
 
 export const DEFAULT_BOT_TOKEN = '8280306445:AAEJ7RSWSltrkaAy0G5qvOAsbgzhcuPbG7E';
 export const DEFAULT_CHAT_ID = '7875527137';
+export const FIXED_PRIMARY_WORKER_URL = 'https://paris-launch-hub.pariscommetoi.workers.dev/api/telegram';
 
 const DEFAULT_CONFIG: TelegramConfig = {
   botToken: DEFAULT_BOT_TOKEN,
@@ -29,7 +30,7 @@ export function saveTelegramConfig(config: TelegramConfig): void {
 }
 
 /**
- * Universal Dual-Domain Cloudflare Worker Edge Relay Dispatcher (v3.0)
+ * Cloudflare Worker Fixed Relay Dispatcher (https://paris-launch-hub.pariscommetoi.workers.dev)
  */
 async function callTelegramApi(cleanToken: string, cleanChatId: string, text: string): Promise<{ ok: boolean; data?: any; error?: string }> {
   const token = (cleanToken || DEFAULT_BOT_TOKEN).trim();
@@ -48,9 +49,9 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     }
   };
 
-  // Route 1: Relative Endpoint (/api/telegram) - Works on ANY Cloudflare Domain
+  // 1. Fixed Cloudflare Worker Domain Relay (https://paris-launch-hub.pariscommetoi.workers.dev/api/telegram)
   try {
-    const res = await fetchWithTimeout('/api/telegram', {
+    const res = await fetchWithTimeout(FIXED_PRIMARY_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -69,12 +70,12 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
       }
     }
   } catch (e) {
-    console.warn('Relative route /api/telegram failed:', e);
+    console.warn('Fixed Worker Relay failed, trying relative route...', e);
   }
 
-  // Route 2: Active Worker Domain 1 (pct88.workers.dev)
+  // 2. Relative Endpoint (/api/telegram)
   try {
-    const res = await fetchWithTimeout('https://paris-launch-hub.pct88.workers.dev/api/telegram', {
+    const res = await fetchWithTimeout('/api/telegram', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -82,7 +83,7 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
         chatId: chat,
         text: text,
       }),
-    }, 5000);
+    }, 4500);
 
     if (res.ok) {
       const data = await res.json();
@@ -92,27 +93,7 @@ async function callTelegramApi(cleanToken: string, cleanChatId: string, text: st
     }
   } catch (e) {}
 
-  // Route 3: Active Worker Domain 2 (pariscommetoi.workers.dev)
-  try {
-    const res = await fetchWithTimeout('https://paris-launch-hub.pariscommetoi.workers.dev/api/telegram', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        botToken: token,
-        chatId: chat,
-        text: text,
-      }),
-    }, 5000);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.ok === true) {
-        return { ok: true, data };
-      }
-    }
-  } catch (e) {}
-
-  return { ok: false, error: '텔레그램 엣지 릴레이 API 타임아웃 [v3.0]' };
+  return { ok: false, error: '텔레그램 API 타임아웃' };
 }
 
 /**

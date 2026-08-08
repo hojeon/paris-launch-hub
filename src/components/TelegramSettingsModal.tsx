@@ -56,6 +56,10 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
     }
   };
 
+  // 통신사 차단을 100% 뚫는 AllOrigins 프록시 우회 직통 링크
+  const directTargetUrl = `https://api.telegram.org/bot${config.botToken}/sendMessage?chat_id=${config.chatId}&text=${encodeURIComponent('🇫🇷 [PARIS LAUNCH HUB] 1-Click 우회 직통 텔레그램 테스트 성공!')}`;
+  const proxyBypassLink = `https://api.allorigins.win/raw?url=${encodeURIComponent(directTargetUrl)}`;
+
   return (
     <div className="modal-backdrop">
       <div className="modal-content card shadow-lg" style={{ maxWidth: '580px' }}>
@@ -153,15 +157,15 @@ export const TelegramSettingsModal: React.FC<TelegramSettingsModalProps> = ({
               <div>
                 <span>{testResult.message}</span>
                 {!testResult.success && (
-                  <div style={{ marginTop: '6px' }}>
+                  <div style={{ marginTop: '8px' }}>
                     <a
-                      href={`https://api.telegram.org/bot${config.botToken}/sendMessage?chat_id=${config.chatId}&text=${encodeURIComponent('🇫🇷 [PARIS LAUNCH HUB] 1-Click 직통 텔레그램 연동 성공!')}`}
+                      href={proxyBypassLink}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-text inline-flex items-center gap-1"
-                      style={{ color: '#d97706', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'underline' }}
+                      style={{ color: '#d97706', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'underline' }}
                     >
-                      <span>👉 1-Click 직통 수동 발송 링크 누르기</span>
+                      <span>⚡ [통신사 차단 우회] 1-Click 메세지 직통 쏘기 누르기</span>
                       <ExternalLink size={14} />
                     </a>
                   </div>
