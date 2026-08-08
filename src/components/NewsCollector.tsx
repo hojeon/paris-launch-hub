@@ -91,20 +91,18 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       allCollected = [...allCollected, ...articles];
     }
 
-    if (autoImportDirectly || true) {
-      let count = 0;
-      const tgConfig = getTelegramConfig();
-      for (const article of allCollected) {
-        const prod = convertArticleToProduct(article);
-        onImportToInbox(prod);
-        count++;
-        if (tgConfig.enabled) {
-          sendProductApprovalRequest(tgConfig, { ...prod, id: `auto-bot-${Date.now()}` } as ProductItem);
-        }
+    let count = 0;
+    const tgConfig = getTelegramConfig();
+    for (const article of allCollected) {
+      const prod = convertArticleToProduct(article);
+      onImportToInbox(prod);
+      count++;
+      if (tgConfig.enabled) {
+        sendProductApprovalRequest(tgConfig, { ...prod, id: `auto-bot-${Date.now()}` } as ProductItem);
       }
-      onAddNewsArticles(allCollected);
-      setRssMessage(`🚀 [완전 자동화 수집 완료] AI 크롤러 + SNS 트렌드 + RSS 3중 엔진으로 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
     }
+    onAddNewsArticles(allCollected);
+    setRssMessage(`🚀 [완전 자동화 수집 완료] AI 크롤러 + SNS 트렌드 + RSS 3중 엔진으로 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
 
     setIsAiCrawling(false);
     setIsFetchingRss(false);
@@ -211,16 +209,14 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     setTimeout(() => setRssMessage(null), 3500);
   };
 
-  // 프랑스 24선 매거진 & 추천 매체 목록
+  // 프랑스 파리 27선 최고 권위 언론 & 전문 매거진 라인업
   const mediaList = [
-    { name: 'Le Figaro', category: '総合/경제', url: 'https://www.lefigaro.fr' },
-    { name: 'Les Échos', category: '경제/테크', url: 'https://www.lesechos.fr' },
-    { name: 'Le Parisien', category: '파리 라이프', url: 'https://www.leparisien.fr' },
-    { name: 'BFM Business', category: '비즈니스/산업', url: 'https://www.bfmbusiness.bfmtv.com' },
-    { name: 'Maddyness', category: '스타트업/테크/인디', url: 'https://www.maddyness.com' },
-    { name: 'FashionNetwork', category: '패션/뷰티 전문', url: 'https://fr.fashionnetwork.com' },
-    { name: 'Sortir à Paris', category: '팝업/인디스팟/문화', url: 'https://www.sortiraparis.com' },
-    { name: 'Time Out Paris', category: '트렌디/인디 팝업', url: 'https://www.timeout.fr/paris' },
+    { name: 'FashionNetwork France', category: '패션/뷰티 B2B (최고권위)', url: 'https://fr.fashionnetwork.com' },
+    { name: 'Journal du Luxe', category: '럭셔리 산업 전문 🏆', url: 'https://journalduluxe.fr' },
+    { name: 'FashionUnited FR', category: '패션 산업 & 런칭 속보', url: 'https://fashionunited.fr' },
+    { name: 'Sortir à Paris', category: '팝업/인디스팟/문화 📍', url: 'https://www.sortiraparis.com' },
+    { name: 'Time Out Paris', category: '파리 힙스터/콘셉트스토어', url: 'https://www.timeout.fr/paris' },
+    { name: 'Do It In Paris', category: '파리 에디터 추천 트렌드지', url: 'https://www.doitinparis.com' },
     { name: 'Vogue France', category: '럭셔리 패션 매거진', url: 'https://www.vogue.fr' },
     { name: 'L\'Officiel Paris', category: '하이패션 매거진', url: 'https://www.lofficiel.com' },
     { name: 'Elle France', category: '뷰티/패션 매거진', url: 'https://www.elle.fr' },
@@ -229,10 +225,15 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     { name: 'Marie Claire FR', category: '뷰티 & 트렌드', url: 'https://www.marieclaire.fr' },
     { name: 'Harper\'s Bazaar FR', category: '주얼리/하이패션', url: 'https://www.harpersbazaar.fr' },
     { name: 'Numéro Magazine', category: '예술/디자인 매거진', url: 'https://www.numero.com' },
-    { name: 'AD Magazine FR', category: '인테리어/디자인', url: 'https://www.admagazine.fr' },
+    { name: 'AD Magazine FR', category: '인테리어/디자인/공방', url: 'https://www.admagazine.fr' },
     { name: 'Madame Figaro', category: '라이프/뷰티', url: 'https://madame.lefigaro.fr' },
-    { name: 'Milk Magazine', category: '인디 라이프/키즈', url: 'https://www.milkmagazine.net' },
-    { name: 'LSA Conso', category: '유통/신제품 출시', url: 'https://www.lsa-conso.fr' },
+    { name: 'Milk Magazine', category: '인디 라이프/키즈/디자인', url: 'https://www.milkmagazine.net' },
+    { name: 'LSA Conso', category: '유통/신제품 공식 출시', url: 'https://www.lsa-conso.fr' },
+    { name: 'Maddyness', category: '스타트업/D2C 인디 브랜드', url: 'https://www.maddyness.com' },
+    { name: 'Le Figaro Économie', category: '総合/경제/비즈니스', url: 'https://www.lefigaro.fr/economie' },
+    { name: 'Les Échos', category: '대표 산업 일간지', url: 'https://www.lesechos.fr' },
+    { name: 'Le Parisien', category: '파리 현지 소식/오프닝', url: 'https://www.leparisien.fr' },
+    { name: 'BFM Business', category: '비즈니스/산업 속보', url: 'https://www.bfmbusiness.bfmtv.com' },
     { name: 'PR Newswire FR', category: '보도자료 배포망', url: 'https://www.prnewswire.com/fr/' },
     { name: 'Business Wire FR', category: '글로벌 런칭 배포', url: 'https://www.businesswire.com' },
     { name: 'Cision France', category: '지사 공식 배포', url: 'https://www.cision.fr' },
@@ -369,8 +370,8 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="card-header">
             <div className="icon-wrapper navy"><Rss size={20} /></div>
             <div>
-              <h3>프랑스 파리 추천 언론 & 매거진 (24선)</h3>
-              <p className="text-muted">인디 디자이너, 팝업스토어, 니치 뷰티 & 하이엔드 매거진</p>
+              <h3>프랑스 파리 추천 언론 & 매거진 (27선 최고권위)</h3>
+              <p className="text-muted">Journal du Luxe, FashionNetwork, Do It In Paris 등 파리 최상급 매체</p>
             </div>
           </div>
 
