@@ -1,5 +1,5 @@
 import { TelegramConfig, ProductItem } from '../types';
-import { isNoiseArticle } from './rssFetcher';
+import { calculateProductnessScore } from './rssFetcher';
 
 const STORAGE_KEY = 'paris_telegram_config';
 
@@ -129,18 +129,11 @@ export async function sendProductApprovalRequest(
   product: ProductItem,
   customNote?: string
 ): Promise<{ success: boolean; message: string }> {
-  // 🚫 Defensive Check 1: Filter out political/fuel/tax/war noise articles
-  if (isNoiseArticle(product.productName || '', product.keyFeatures || '')) {
-    console.warn(`[Telegram Bot] Blocked sending noise article: ${product.productName}`);
-    return { success: false, message: '노이즈 기사로 차단됨 (정치/연료보조금/세금/사회정세)' };
-  }
-
-  // 🚫 Defensive Check 2: Filter out non-buying agency relevant news
-  if (product.brand === 'Indemnité' || product.brand === '미정 브랜드' && product.keyFeatures?.includes('0% 전제 순수 마진율 ~25%')) {
-    if (product.keyFeatures?.includes('일반 트렌드 수집작') || product.keyFeatures?.includes('carburant')) {
-      console.warn(`[Telegram Bot] Blocked non-product article: ${product.productName}`);
-      return { success: false, message: '구매대행 무관 기사 차단' };
-    }
+  // 🚫 Contextual Productness Check: Block non-commercial / non-product articles
+  const productnessScore = calculateProductnessScore(product.productName || '', product.keyFeatures || '');
+  if (productnessScore < 15) {
+    console.warn(`[Telegram Bot] Blocked non-product article by context score (${productnessScore}): ${product.productName}`);
+    return { success: false, message: '상업적 신제품/브랜드 정보 부족으로 텔레그램 차단' };
   }
 
   const importanceBadge = product.importance === '높음' ? '🔴 [중요도 높음]' : product.importance === '중간' ? '🟡 [중요도 중간]' : '🟢 [중요도 일반]';

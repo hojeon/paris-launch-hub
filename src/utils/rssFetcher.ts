@@ -66,24 +66,47 @@ export const PRESET_RSS_SOURCES: RssFeedSource[] = [
   },
 ];
 
-// 🚫 무관한 정치/정부/연료/세금/전쟁/사회 이슈 차단 키워드 리스트
-export const NOISE_EXCLUSION_KEYWORDS = [
-  'carburant', 'indemnité', 'guerre', 'gouvernement', 'impôt', 'taxe', 'retraite',
-  'politique', 'grève', 'macron', 'bourse', 'immobilier', 'inflation', 'gazole',
-  'essence', 'moyen-orient', 'russie', 'ukraine', 'président', 'assemblée', 'député',
-  '보조금', '연료', '정치', '정부', '세금', '연금', '파업', '전쟁', '마크롱', '부동산', '증시'
-];
-
 /**
- * Checks if article content contains noise keywords (politics, fuel, government, taxes)
+ * Contextual Productness Evaluation Engine (No Hardcoded Forbidden Words)
+ * Evaluates whether an article is actually about a commercial product/brand/launch.
  */
-export function isNoiseArticle(title: string, snippet: string = ''): boolean {
-  const combined = (title + ' ' + snippet).toLowerCase();
-  return NOISE_EXCLUSION_KEYWORDS.some(kw => combined.includes(kw.toLowerCase()));
+export function calculateProductnessScore(title: string, description: string = ''): number {
+  let score = 0;
+  const combined = (title + ' ' + description).toLowerCase();
+
+  // 1. Commercial Product / Collection Signals (+30)
+  if (combined.includes('collection') || combined.includes('nouveauté') || combined.includes('produit') || combined.includes('lancement') || combined.includes('launch') || combined.includes('new product')) {
+    score += 30;
+  }
+
+  // 2. Retail Store / Pop-up Signals (+30)
+  if (combined.includes('pop-up') || combined.includes('popup') || combined.includes('boutique') || combined.includes('store') || combined.includes('éphémère') || combined.includes('flagship')) {
+    score += 30;
+  }
+
+  // 3. Price / Shopping Signals (+20)
+  if (/\d+\s*(€|eur|\$|usd|£)/i.test(combined) || combined.includes('prix') || combined.includes('disponible') || combined.includes('euro')) {
+    score += 20;
+  }
+
+  // 4. Fashion / Beauty / Lifestyle / Gourmet Domain Signals (+20)
+  if (combined.includes('mode') || combined.includes('beauté') || combined.includes('parfum') || combined.includes('fashion') || combined.includes('beauty') || combined.includes('pâtisserie') || combined.includes('design') || combined.includes('maroquinerie')) {
+    score += 20;
+  }
+
+  // 5. Negative Non-Commercial Context Multiplier (Socio-political / Fuel / Subsidy Policy without product context)
+  if (combined.includes('déplacement') || combined.includes('gouvernement') || combined.includes('décret') || combined.includes('carburant') || combined.includes('indemnité')) {
+    // If it lacks product/brand/store signals, reduce score heavily
+    if (!combined.includes('marque') && !combined.includes('collection') && !combined.includes('boutique') && !combined.includes('flacon')) {
+      score -= 50;
+    }
+  }
+
+  return score;
 }
 
 /**
- * Genuine Live XML RSS/Atom Fetcher Engine
+ * Genuine Live XML RSS/Atom Fetcher Engine with Contextual Productness Classifier
  */
 export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle[]> {
   console.log(`[RSS Engine] Live fetch for: ${feed.name} (${feed.url})`);
@@ -102,7 +125,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         try {
           const parsedJson = JSON.parse(text);
           if (parsedJson.items && Array.isArray(parsedJson.items)) {
-            return parsedJson.items.filter((i: any) => !isNoiseArticle(i.title || '', i.snippet || ''));
+            return parsedJson.items.filter((i: any) => calculateProductnessScore(i.title || '', i.snippet || '') >= 15);
           }
         } catch (e) {}
       }
@@ -117,7 +140,7 @@ export async function fetchRssArticles(feed: RssFeedSource): Promise<NewsArticle
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           return data
-            .filter((item: any) => !isNoiseArticle(item.title || '', item.snippet || ''))
+            .filter((item: any) => calculateProductnessScore(item.title || '', item.snippet || '') >= 15)
             .map((item: any, idx: number) => ({
               ...item,
               id: `news-api-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
@@ -225,9 +248,10 @@ function parseRawXmlToArticles(xmlString: string, feed: Partial<RssFeedSource>):
       let description = descNode ? (descNode.textContent || '').trim() : '';
       description = stripHtmlTags(description);
 
-      // 🚫 Filter out noise articles (politics, fuel subsidies, wars)
-      if (isNoiseArticle(title, description)) {
-        console.warn(`[RSS Engine Filtered Noise]: ${title}`);
+      // 🚫 Contextual Productness Evaluation (No hardcoded keyword ban)
+      const pScore = calculateProductnessScore(title, description);
+      if (pScore < 15) {
+        console.warn(`[Context Filter Drop] Low productness (${pScore}): ${title}`);
         return;
       }
 
@@ -305,7 +329,7 @@ function parseXmlWithRegexFallback(xmlString: string, feed: Partial<RssFeedSourc
 
     const desc = descMatch ? stripHtmlTags(descMatch[2] || descMatch[1]).trim() : '';
 
-    if (isNoiseArticle(title, desc)) return;
+    if (calculateProductnessScore(title, desc) < 15) return;
 
     let link = linkMatch ? (linkMatch[1] || linkMatch[0]).trim() : 'https://news.google.com';
     link = stripHtmlTags(link);
