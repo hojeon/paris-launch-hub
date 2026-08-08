@@ -27,7 +27,6 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('전체');
   const [isFetchingRss, setIsFetchingRss] = useState<boolean>(false);
   const [isAiCrawling, setIsAiCrawling] = useState<boolean>(false);
-  const [isAiPurifying, setIsAiPurifying] = useState<boolean>(false);
   const [rssMessage, setRssMessage] = useState<string | null>(null);
   const [customRssUrl, setCustomRssUrl] = useState<string>('');
   const [autoImportDirectly, setAutoImportDirectly] = useState<boolean>(false);
@@ -53,11 +52,11 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       launchDate: '일정 확인 필요',
       location: article.suggestedLocation || '파리 매장/팝업',
       price: article.suggestedPrice || '가격 확인 필요',
-      keyFeatures: `${article.snippet}\n\n🇰🇷 [AI 파리 구매대행 심층 리포트 (택스프리 0% 전제)]:\n- 적합도: ${deepBuying.scorePercent}% (${deepBuying.badgeText})\n- 차익 분석: ${deepBuying.priceArbitrage}\n- 부피무게 평가: ${deepBuying.volumetricRisk}\n- 바잉 난이도: ${deepBuying.sourcingDifficulty}\n- 통관 규제: ${deepBuying.customsCheck}\n- 타겟층: ${deepBuying.targetAudienceTag}`,
+      keyFeatures: `${article.snippet}\n\n🇰🇷 [AI 실시간 검증 구매대행 심층 리포트 (택스프리 0% 전제)]:\n- 적합도: ${deepBuying.scorePercent}% (${deepBuying.badgeText})\n- 차익 분석: ${deepBuying.priceArbitrage}\n- 부피무게 평가: ${deepBuying.volumetricRisk}\n- 바잉 난이도: ${deepBuying.sourcingDifficulty}\n- 통관 규제: ${deepBuying.customsCheck}\n- 타겟층: ${deepBuying.targetAudienceTag}`,
       targetAudience: deepBuying.targetAudienceTag,
       sourceUrl: article.url,
       sourceName: article.source,
-      reliability: '언론 보도 / AI 파싱',
+      reliability: 'AI LLM 실시간 검증 완료',
       importance: level,
       importanceScore: score,
       scoreDetails: initialDetails,
@@ -68,47 +67,31 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     };
   };
 
-  // 🤖 AI 기사 심층 정제 파서 (69개 등 수집 목록 중 B2B/M&A/세무조사 무관 기사 100% 솎아내기)
-  const handleRunAiPurifier = async () => {
-    if (newsList.length === 0) return;
-    setIsAiPurifying(true);
-    setRssMessage(`🤖 AI 엔진이 수집된 ${newsList.length}개 기사 전체를 심층 분석하여 무관한 B2B/M&A/세무조사 기사를 100% 솎아내는 중입니다...`);
-
-    const { validProducts, rejectedCount } = await filterArticlesWithAi(newsList);
-
-    if (onClearNewsList) onClearNewsList();
-    onAddNewsArticles(validProducts);
-
-    setIsAiPurifying(false);
-    setRssMessage(`✨ [AI 정제 완료] 총 ${newsList.length}개 중 무관 기사 ${rejectedCount}건 100% 탈락! 진짜 구매대행 실물 신제품 ${validProducts.length}건만 정제되었습니다!`);
-    setTimeout(() => setRssMessage(null), 6000);
-  };
-
-  // 1, 3, 4번 통합 3중 완전 자동화 수집 봇
+  // 1, 3, 4번 통합: 수집과 동시에 AI 실시간 게이트키퍼가 무관 기사 100% 차단
   const handleRunFullAutomationBot = async () => {
     setIsAiCrawling(true);
     setIsFetchingRss(true);
-    setRssMessage('🤖 [Full Automation Engine] ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler 3중 자동 수집 구동 중...');
+    setRssMessage('🤖 [AI 실시간 수집 엔진] 탐색과 동시에 AI가 M&A/세무조사 무관 기사를 실시간 차단하는 중...');
 
-    let allCollected: NewsArticle[] = [];
+    let allRawCollected: NewsArticle[] = [];
 
     try {
       const aiArticles = await runAiWebCrawler('Paris launch new product indie brand niche beauty');
-      allCollected = [...allCollected, ...aiArticles];
+      allRawCollected = [...allRawCollected, ...aiArticles];
     } catch (e) {}
 
     try {
       const snsArticles = await runSnsAutoCrawler('popupparis');
-      allCollected = [...allCollected, ...snsArticles];
+      allRawCollected = [...allRawCollected, ...snsArticles];
     } catch (e) {}
 
     for (const source of PRESET_RSS_SOURCES) {
       const articles = await fetchRssArticles(source);
-      allCollected = [...allCollected, ...articles];
+      allRawCollected = [...allRawCollected, ...articles];
     }
 
-    // AI Gatekeeper Filtering
-    const { validProducts } = await filterArticlesWithAi(allCollected);
+    // ⚡ 수집과 동시에 AI 실시간 심층 통과 검증 (AI Gatekeeper Filtering at Collection Time)
+    const { validProducts, rejectedCount } = await filterArticlesWithAi(allRawCollected);
 
     let count = 0;
     const notifConfig = getNotificationConfig();
@@ -122,35 +105,20 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     }
 
     onAddNewsArticles(validProducts);
-    setRssMessage(`🚀 [AI 정밀 자동화 완결] 무관 기사 100% 걸러내고 파리 구매대행 실물 신제품 ${validProducts.length}건이 DB Inbox로 자동 수집되었습니다!`);
+    setRssMessage(`🚀 [AI 수집 완결] 수집 시점에 AI가 무관 기사 ${rejectedCount}건 차단! 100% 검증된 파리 구매대행 실물 신제품 ${validProducts.length}건만 바로 수집되었습니다!`);
 
     setIsAiCrawling(false);
     setIsFetchingRss(false);
     setTimeout(() => setRssMessage(null), 6000);
   };
 
-  const handleTestSingleSiteFeed = async () => {
-    setIsFetchingRss(true);
-    setRssMessage('🧪 FashionNetwork FR (fr,0.xml) 피드에서 검색어 필터 없이 원본 XML 파싱 중...');
-    const result = await fetchSingleSiteFullRss('https://fr.fashionnetwork.com/rss/feed/fr,0.xml');
-
-    if (result.articles.length > 0) {
-      const { validProducts } = await filterArticlesWithAi(result.articles);
-      onAddNewsArticles(validProducts);
-      setRssMessage(`✅ FashionNetwork 파싱 성공! AI가 무관 기사를 제외하고 구매대행 실물 제품 ${validProducts.length}건을 선별했습니다.`);
-    } else {
-      setRssMessage('⚠️ FashionNetwork XML 파싱 실패: 네트워크 상태를 확인하세요.');
-    }
-
-    setIsFetchingRss(false);
-    setTimeout(() => setRssMessage(null), 5000);
-  };
-
   const handleFetchPresetRss = async (feed: RssFeedSource) => {
     setIsFetchingRss(true);
-    setRssMessage(`${feed.name} 라이브 RSS 수집 및 AI 정밀 검증 중...`);
+    setRssMessage(`${feed.name} 수집 시점에 AI가 무관 기사를 실시간 차단 중...`);
     const articles = await fetchRssArticles(feed);
-    const { validProducts } = await filterArticlesWithAi(articles);
+    
+    // ⚡ 수집 시점 AI 실시간 통과 검증
+    const { validProducts, rejectedCount } = await filterArticlesWithAi(articles);
 
     if (autoImportDirectly) {
       let count = 0;
@@ -163,26 +131,27 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           sendProductNotification(notifConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
         }
       }
-      setRssMessage(`⚡ AI 검증 완료! ${count}개의 실물 신제품 소식이 DB Inbox로 100% 자동 등록되었습니다!`);
+      setRssMessage(`⚡ AI가 무관 기사 ${rejectedCount}건을 차단하고 ${count}개의 실물 신제품만 DB Inbox에 즉시 등록했습니다!`);
     } else {
       onAddNewsArticles(validProducts);
-      setRssMessage(`${feed.name} 피드에서 AI 검증을 통과한 ${validProducts.length}개의 구매대행 신제품 기사를 불러왔습니다!`);
+      setRssMessage(`${feed.name} 피드에서 AI가 검증한 ${validProducts.length}개의 실물 신제품 기사만 수집되었습니다! (무관 기사 ${rejectedCount}건 자동 차단됨)`);
     }
 
     setIsFetchingRss(false);
-    setTimeout(() => setRssMessage(null), 3500);
+    setTimeout(() => setRssMessage(null), 4000);
   };
 
   const handleFetchAllRss = async () => {
     setIsFetchingRss(true);
-    setRssMessage('FashionNetwork, Google News Indie & 럭셔리 라이브 RSS 수집 및 AI 검증 중...');
+    setRssMessage('라이브 RSS 파싱 및 수집과 동시에 AI가 무관 기사를 실시간 차단 중...');
     let allNew: NewsArticle[] = [];
     for (const source of PRESET_RSS_SOURCES) {
       const articles = await fetchRssArticles(source);
       allNew = [...allNew, ...articles];
     }
 
-    const { validProducts } = await filterArticlesWithAi(allNew);
+    // ⚡ 수집 시점 AI 실시간 통과 검증
+    const { validProducts, rejectedCount } = await filterArticlesWithAi(allNew);
 
     if (autoImportDirectly) {
       let count = 0;
@@ -195,10 +164,10 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           sendProductNotification(notifConfig, { ...prod, id: `auto-${Date.now()}` } as ProductItem);
         }
       }
-      setRssMessage(`⚡ AI 검증 완료! 총 ${count}개의 최신 구매대행 실물 제품이 DB Inbox에 자동 등록되었습니다!`);
+      setRssMessage(`⚡ AI 수집 완료! 무관 기사 ${rejectedCount}건 차단 후 총 ${count}개의 구매대행 실물 신제품이 DB Inbox에 수집 완료되었습니다!`);
     } else {
       onAddNewsArticles(validProducts);
-      setRssMessage(`AI 검증을 통과한 총 ${validProducts.length}개의 파리 실물 신제품 기사를 수집했습니다!`);
+      setRssMessage(`AI가 무관 기사 ${rejectedCount}건을 걸러내고, 총 ${validProducts.length}개의 파리 실물 신제품 기사만 선별 수집했습니다!`);
     }
 
     setIsFetchingRss(false);
@@ -208,7 +177,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
   const handleFetchCustomRss = async () => {
     if (!customRssUrl.trim()) return;
     setIsFetchingRss(true);
-    setRssMessage('커스텀 RSS 피드 주소 파싱 중...');
+    setRssMessage('커스텀 RSS 수집 및 AI 실시간 검증 중...');
     const customSource: RssFeedSource = {
       id: `rss-custom-${Date.now()}`,
       name: '커스텀 RSS 피드',
@@ -223,7 +192,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       for (const article of validProducts) {
         onImportToInbox(convertArticleToProduct(article));
       }
-      setRssMessage(`⚡ AI 검증된 ${validProducts.length}개의 뉴스가 DB Inbox에 자동 등록되었습니다.`);
+      setRssMessage(`⚡ AI 검증된 ${validProducts.length}개의 뉴스가 DB Inbox에 수집되었습니다.`);
     } else {
       onAddNewsArticles(validProducts);
       setRssMessage(`AI 검증된 ${validProducts.length}개의 뉴스를 수집했습니다.`);
@@ -231,6 +200,23 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
     setIsFetchingRss(false);
     setCustomRssUrl('');
     setTimeout(() => setRssMessage(null), 3500);
+  };
+
+  const handleTestSingleSiteFeed = async () => {
+    setIsFetchingRss(true);
+    setRssMessage('🧪 FashionNetwork FR 원본 피드 파싱 및 AI 실시간 검증 중...');
+    const result = await fetchSingleSiteFullRss('https://fr.fashionnetwork.com/rss/feed/fr,0.xml');
+
+    if (result.articles.length > 0) {
+      const { validProducts } = await filterArticlesWithAi(result.articles);
+      onAddNewsArticles(validProducts);
+      setRssMessage(`✅ FashionNetwork 파싱 성공! AI가 무관 기사를 제외하고 구매대행 실물 제품 ${validProducts.length}건만 수집했습니다.`);
+    } else {
+      setRssMessage('⚠️ FashionNetwork XML 파싱 실패: 네트워크 상태를 확인하세요.');
+    }
+
+    setIsFetchingRss(false);
+    setTimeout(() => setRssMessage(null), 5000);
   };
 
   const mediaList = [
@@ -307,7 +293,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
   return (
     <div className="collector-container">
-      {/* Top Banner: Full Automation Bot Launcher */}
+      {/* Top Banner: Full Automation Bot Launcher with Direct AI Gatekeeper */}
       <div className="card shadow-md mb-4" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: '#ffffff', border: '1px solid #4338ca' }}>
         <div className="card-header space-between" style={{ borderBottom: 'none', paddingBottom: '0' }}>
           <div className="flex items-center gap-3">
@@ -315,9 +301,9 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               <Bot size={28} color="#ffffff" />
             </div>
             <div>
-              <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [AI Commercial Product Engine] 100% 실물 신제품 전용 AI 검증 수집 봇</h3>
+              <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [AI 실시간 필터 수집 엔진] 기본 수집 시 AI가 무관 기사 100% 차단</h3>
               <p style={{ color: '#c7d2fe', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                B2B/M&A/세무조사 기사 100% 걸러내고 실제 직구 가능 파리 신제품 & 팝업스토어 컬렉션만 자동 선별
+                수집 클릭 즉시 AI가 B2B/M&A/세무조사 기사를 실시간 걸러내고 파리 구매대행 실물 신제품만 등록합니다.
               </p>
             </div>
           </div>
@@ -330,7 +316,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', border: 'none', padding: '12px 20px', fontSize: '0.95rem', fontWeight: 700, borderRadius: '8px', boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)' }}
             >
               <Sparkles size={18} className={isAiCrawling ? 'spin' : ''} />
-              <span>{isAiCrawling ? '🤖 AI 100% 실물 신제품 선별 수집 중...' : '🚀 AI 100% 실물 신제품 수집 봇 실행'}</span>
+              <span>{isAiCrawling ? '🤖 AI가 무관 기사 차단하며 수집 중...' : '🚀 AI 100% 실물 신제품 자동 수집'}</span>
             </button>
           </div>
         </div>
@@ -455,26 +441,12 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
           <div className="header-with-badge">
             <div className="icon-wrapper rose"><Bookmark size={20} /></div>
             <div>
-              <h3>실시간 파리 속보 뉴스 & AI 정밀 신제품 수집 엔진</h3>
-              <p className="text-muted">B2B/M&A/세무조사 뉴스 100% 걸러내고 파리 신제품만 DB Inbox 자동 직행</p>
+              <h3>실시간 파리 속보 뉴스 & AI 수집 시점 자동 검증 엔진</h3>
+              <p className="text-muted">수집 클릭 즉시 AI가 무관 기사 100% 차단 ➔ 파리 신제품만 DB Inbox 직행</p>
             </div>
           </div>
 
           <div className="flex gap-2 items-center" style={{ flexWrap: 'wrap' }}>
-            {/* AI Purifier Button: Purifies existing raw list */}
-            {newsList.length > 0 && (
-              <button
-                className="btn-secondary btn-sm"
-                onClick={handleRunAiPurifier}
-                disabled={isAiPurifying}
-                style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd', fontWeight: 700 }}
-                title="AI가 수집된 목록 전체를 심층 분석하여 무관 기사 100% 솎아내기"
-              >
-                <Sparkles size={14} className={isAiPurifying ? 'spin' : ''} />
-                <span>{isAiPurifying ? '🤖 AI 솎아내는 중...' : `🤖 AI 정제 (무관 기사 일괄 솎아내기 ${newsList.length}건)`}</span>
-              </button>
-            )}
-
             {/* Always Visible Reset & Clear All Button */}
             {onClearNewsList && (
               <button
@@ -509,7 +481,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <RefreshCw size={16} className={isFetchingRss ? 'spin' : ''} />
-              <span>{isFetchingRss ? '자동 수집 중...' : '전체 RSS 파싱 & AI 검증 수집'}</span>
+              <span>{isFetchingRss ? 'AI 실시간 수집 중...' : '전체 RSS 파싱 & AI 수집'}</span>
             </button>
           </div>
         </div>
@@ -517,7 +489,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         {/* Live RSS Preset Source Toolbar */}
         <div className="rss-toolbar mb-4" style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--accent-gold)' }}>
-            📡 실시간 파리 매체 RSS 선택 수집:
+            📡 실시간 파리 매체 RSS 선택 수집 (AI 실시간 게이트키퍼 적용):
           </div>
           <div className="flex flex-wrap gap-2 mb-3">
             {PRESET_RSS_SOURCES.map((source) => (
@@ -554,7 +526,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
 
           {rssMessage && (
             <div className="alert-box info mt-2" style={{ padding: '8px 12px', fontSize: '0.85rem' }}>
-              <RefreshCw size={14} className={(isFetchingRss || isAiPurifying) ? 'spin' : ''} />
+              <RefreshCw size={14} className={isFetchingRss ? 'spin' : ''} />
               <span>{rssMessage}</span>
             </div>
           )}
@@ -582,7 +554,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <Bookmark size={36} className="text-muted mb-2" style={{ opacity: 0.5 }} />
             <h4 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>현재 선택된 카테고리의 수집 목록이 0건으로 비워져 있습니다.</h4>
             <p className="text-muted" style={{ fontSize: '0.9rem' }}>
-              상단의 <strong>[🚀 AI 100% 실물 신제품 수집 봇 실행]</strong> 버튼을 누르시면 AI가 무관 기사를 걸러내고 파리 신제품만 자동 수집합니다!
+              상단의 <strong>[🚀 AI 100% 실물 신제품 자동 수집]</strong> 버튼을 누르시면 수집 클릭 즉시 AI가 무관 기사를 걸러내고 신제품만 등록합니다!
             </p>
           </div>
         ) : (
@@ -631,7 +603,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                         <span>🇰🇷 AI 구매대행 심층 적합도: <strong>{deepBuying.scorePercent}%</strong> ({deepBuying.badgeText})</span>
                       </div>
                       <span style={{ fontSize: '0.75rem', background: '#059669', color: '#ffffff', padding: '3px 10px', borderRadius: '12px', fontWeight: 600 }}>
-                        🛡️ AI 실물 제품 검증 완료
+                        🛡️ 수집 시점 AI 통과 검증 완료
                       </span>
                     </div>
 
