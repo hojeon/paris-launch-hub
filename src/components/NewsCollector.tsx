@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NewsArticle, ProductItem, RssFeedSource } from '../types';
-import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu, ShoppingBag, TrendingUp, DollarSign } from 'lucide-react';
-import { calculateImportanceScore, calculateBuyingAgencySuitability } from '../utils/scoreCalculator';
+import { Search, Copy, Check, ExternalLink, PlusCircle, Bookmark, Rss, RefreshCw, Zap, Trash2, Share2, Instagram, Video, Linkedin, ShieldCheck, X, Bot, Cpu, ShoppingBag, TrendingUp, DollarSign, Package, AlertTriangle, Lock, Target } from 'lucide-react';
+import { calculateImportanceScore, calculateDeepBuyingAgencySuitability } from '../utils/scoreCalculator';
 import { PRESET_RSS_SOURCES, fetchRssArticles, fetchSingleSiteFullRss } from '../utils/rssFetcher';
 import { runAiWebCrawler } from '../utils/aiCrawlerService';
 import { runSnsAutoCrawler } from '../utils/snsAutoCrawler';
@@ -40,7 +40,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       isTrustedMedia: true,
     };
     const { score, level } = calculateImportanceScore(initialDetails);
-    const buyingInfo = calculateBuyingAgencySuitability(article);
+    const deepBuying = calculateDeepBuyingAgencySuitability(article);
 
     return {
       collectedAt: today,
@@ -51,15 +51,15 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       launchDate: '일정 확인 필요',
       location: article.suggestedLocation || '파리 매장/팝업',
       price: article.suggestedPrice || '가격 확인 필요',
-      keyFeatures: `${article.snippet}\n\n🇰🇷 [한국 구매대행 분석]: 적합도 ${buyingInfo.scorePercent}% (${buyingInfo.badgeText}) | ${buyingInfo.targetMargin}\n- ${buyingInfo.reasons.join('\n- ')}`,
-      targetAudience: '파리 현지 소비자 & 한국 직구족/구매대행',
+      keyFeatures: `${article.snippet}\n\n🇰🇷 [실전 파리 구매대행 심층 리포트]:\n- 적합도: ${deepBuying.scorePercent}% (${deepBuying.badgeText})\n- 차익 분석: ${deepBuying.priceArbitrage}\n- 부피무게 평가: ${deepBuying.volumetricRisk}\n- 바잉 난이도: ${deepBuying.sourcingDifficulty}\n- 통관 규제: ${deepBuying.customsCheck}\n- 타겟층: ${deepBuying.targetAudienceTag}`,
+      targetAudience: deepBuying.targetAudienceTag,
       sourceUrl: article.url,
       sourceName: article.source,
       reliability: '언론 보도 / AI 탐색',
       importance: level,
       importanceScore: score,
       scoreDetails: initialDetails,
-      followUp: `구매대행 적합도 ${buyingInfo.scorePercent}% - 공식 이미지 수집 및 마진 계산 필요`,
+      followUp: `구매대행 심층 적합도 ${deepBuying.scorePercent}% - ${deepBuying.sourcingDifficulty} 준비 필요`,
       naverStatus: '대기',
       instaStatus: '대기',
       imagePrepared: false,
@@ -103,7 +103,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
       }
     }
     onAddNewsArticles(allCollected);
-    setRssMessage(`🚀 [완전 자동화 수집 완료] 한국 구매대행 적합도 분석 포함 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
+    setRssMessage(`🚀 [완전 자동화 수집 완료] 실전 파리 구매대행 심층 7대 분석 포함 총 ${count}건의 기사가 DB Inbox로 100% 자동 등록되었습니다!`);
 
     setIsAiCrawling(false);
     setIsFetchingRss(false);
@@ -297,7 +297,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
             <div>
               <h3 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>🤖 [Full Automation Bot] 1, 3, 4번 통합 완전 자동화 수집 봇</h3>
               <p style={{ color: '#c7d2fe', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler + 🇰🇷 한국 구매대행 적합도 자동 분석
+                ① AI Web Crawler + ③ Web Scraper + ④ SNS Auto Crawler + 🇰🇷 실전 파리 구매대행 심층 7대 리포트 분석
               </p>
             </div>
           </div>
@@ -567,7 +567,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
         ) : (
           <div className="news-feed-list">
             {filteredNews.map((article) => {
-              const buyingInfo = calculateBuyingAgencySuitability(article);
+              const deepBuying = calculateDeepBuyingAgencySuitability(article);
 
               return (
                 <div key={article.id} className="news-item-card" style={{ position: 'relative' }}>
@@ -604,21 +604,40 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                   <h4 className="news-title">{article.title}</h4>
                   <p className="news-snippet">{article.snippet}</p>
 
-                  {/* 🇰🇷 Korea Buying Agency Suitability Analysis Box */}
-                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px' }}>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2" style={{ color: '#047857', fontWeight: 700, fontSize: '0.85rem' }}>
-                        <ShoppingBag size={16} />
-                        <span>🇰🇷 파리 구매대행 적합도: <strong>{buyingInfo.scorePercent}%</strong> ({buyingInfo.badgeText})</span>
+                  {/* 🇰🇷 Real-World Buying Agency 7-Deep Factors Box */}
+                  <div style={{ background: '#f0fdf4', border: '1px solid #a7f3d0', padding: '12px 14px', borderRadius: '10px', marginBottom: '12px' }}>
+                    <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
+                      <div className="flex items-center gap-2" style={{ color: '#065f46', fontWeight: 700, fontSize: '0.9rem' }}>
+                        <ShoppingBag size={18} />
+                        <span>🇰🇷 실전 구매대행 심층 적합도: <strong>{deepBuying.scorePercent}%</strong> ({deepBuying.badgeText})</span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', background: '#10b981', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-                        {buyingInfo.targetMargin}
+                      <span style={{ fontSize: '0.75rem', background: '#059669', color: '#ffffff', padding: '3px 10px', borderRadius: '12px', fontWeight: 600 }}>
+                        {deepBuying.priceArbitrage}
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {buyingInfo.reasons.map((r, rIdx) => (
-                        <span key={rIdx} style={{ fontSize: '0.75rem', background: '#ffffff', color: '#065f46', border: '1px solid #a7f3d0', padding: '3px 8px', borderRadius: '4px', fontWeight: 500 }}>
+                    <div className="grid grid-cols-2 gap-2 mb-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#047857', background: '#ffffff', padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1fae5' }}>
+                        <Package size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                        <strong>부피무게 평가:</strong> {deepBuying.volumetricRisk}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#047857', background: '#ffffff', padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1fae5' }}>
+                        <Lock size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                        <strong>바잉 난이도:</strong> {deepBuying.sourcingDifficulty}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#047857', background: '#ffffff', padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1fae5' }}>
+                        <Zap size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                        <strong>통관 규제:</strong> {deepBuying.customsCheck}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#047857', background: '#ffffff', padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1fae5' }}>
+                        <Target size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                        <strong>핵심 타겟:</strong> {deepBuying.targetAudienceTag}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {deepBuying.reasons.map((r, rIdx) => (
+                        <span key={rIdx} style={{ fontSize: '0.75rem', color: '#065f46', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '4px' }}>
                           {r}
                         </span>
                       ))}
@@ -656,7 +675,7 @@ export const NewsCollector: React.FC<NewsCollectorProps> = ({
                       onClick={() => handleQuickImport(article)}
                     >
                       <PlusCircle size={14} />
-                      <span>DB Inbox에 1-Click 추가 (적합도 포함)</span>
+                      <span>DB Inbox에 1-Click 추가 (심층 리포트 포함)</span>
                     </button>
                   </div>
                 </div>
